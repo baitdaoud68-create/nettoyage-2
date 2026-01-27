@@ -8,10 +8,44 @@ import InterventionDetails from '../components/InterventionDetails'
 
 export default function TechnicianApp() {
   const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Vérifier l'authentification
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate('/login')
+      } else {
+        setLoading(false)
+      }
+    })
+
+    // Écouter les changements d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        navigate('/login')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [navigate])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     navigate('/login')
+  }
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div>Chargement...</div>
+      </div>
+    )
   }
 
   return (

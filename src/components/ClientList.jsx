@@ -113,8 +113,11 @@ export default function ClientList() {
       setClients(clients.filter(c => c.id !== deletingClient.id))
       setDeletingClient(null)
       setDeletePassword('')
+      // Recharger la liste pour confirmer la suppression
+      await loadClients()
     } else {
-      setDeleteError('Erreur lors de la suppression')
+      console.error('Erreur de suppression:', error)
+      setDeleteError('Erreur lors de la suppression: ' + error.message)
     }
 
     setLoading(false)
