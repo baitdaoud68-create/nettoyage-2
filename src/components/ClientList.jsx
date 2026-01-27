@@ -109,18 +109,16 @@ export default function ClientList() {
       .delete()
       .eq('id', deletingClient.id)
 
+    setLoading(false)
+
     if (!error) {
       setClients(clients.filter(c => c.id !== deletingClient.id))
       setDeletingClient(null)
       setDeletePassword('')
-      // Recharger la liste pour confirmer la suppression
-      await loadClients()
     } else {
       console.error('Erreur de suppression:', error)
       setDeleteError('Erreur lors de la suppression: ' + error.message)
     }
-
-    setLoading(false)
   }
 
   const openDeleteModal = (client, e) => {
