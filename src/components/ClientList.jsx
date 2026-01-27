@@ -19,6 +19,9 @@ export default function ClientList() {
     address: ''
   })
   const [loading, setLoading] = useState(false)
+  const [deletingClient, setDeletingClient] = useState(null)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -88,6 +91,40 @@ export default function ClientList() {
       setEditedClient({ name: '', email: '', phone: '', address: '' })
     }
     setLoading(false)
+  }
+
+  const handleDeleteClient = async (e) => {
+    e.preventDefault()
+    setDeleteError('')
+
+    if (deletePassword !== '3112') {
+      setDeleteError('Mot de passe incorrect')
+      return
+    }
+
+    setLoading(true)
+
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', deletingClient.id)
+
+    if (!error) {
+      setClients(clients.filter(c => c.id !== deletingClient.id))
+      setDeletingClient(null)
+      setDeletePassword('')
+    } else {
+      setDeleteError('Erreur lors de la suppression')
+    }
+
+    setLoading(false)
+  }
+
+  const openDeleteModal = (client, e) => {
+    e.stopPropagation()
+    setDeletingClient(client)
+    setDeletePassword('')
+    setDeleteError('')
   }
 
   return (
@@ -439,6 +476,131 @@ export default function ClientList() {
         </div>
       )}
 
+      {deletingClient && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            width: '100%',
+            maxWidth: '400px'
+          }}>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '16px',
+              color: '#dc2626'
+            }}>
+              Supprimer le client
+            </h3>
+
+            <p style={{
+              color: '#4a5568',
+              marginBottom: '24px',
+              lineHeight: '1.5'
+            }}>
+              Êtes-vous sûr de vouloir supprimer <strong>{deletingClient.name}</strong> ?
+              <br/>
+              <br/>
+              Cette action supprimera également tous les chantiers, catégories et interventions associés. Cette action est irréversible.
+            </p>
+
+            <form onSubmit={handleDeleteClient}>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: '#4a5568',
+                  fontWeight: '500'
+                }}>
+                  Entrez le mot de passe de confirmation
+                </label>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value)
+                    setDeleteError('')
+                  }}
+                  placeholder="Mot de passe"
+                  autoFocus
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: deleteError ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '16px'
+                  }}
+                />
+                {deleteError && (
+                  <div style={{
+                    color: '#dc2626',
+                    fontSize: '14px',
+                    marginTop: '8px',
+                    fontWeight: '500'
+                  }}>
+                    {deleteError}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: loading ? '#a0aec0' : '#dc2626',
+                    color: 'white',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {loading ? 'Suppression...' : 'Supprimer'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeletingClient(null)
+                    setDeletePassword('')
+                    setDeleteError('')
+                  }}
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#e2e8f0',
+                    color: '#4a5568',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -530,6 +692,20 @@ export default function ClientList() {
                 }}
               >
                 ✏️
+              </button>
+              <button
+                onClick={(e) => openDeleteModal(client, e)}
+                style={{
+                  padding: '10px 16px',
+                  background: '#dc2626',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+                title="Supprimer le client"
+              >
+                🗑️
               </button>
             </div>
           </div>
