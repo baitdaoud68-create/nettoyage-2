@@ -29,13 +29,22 @@ export default function ClientList() {
   }, [])
 
   const loadClients = async () => {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (!error && data) {
-      setClients(data)
+      console.log('Load clients:', { count: data?.length, error })
+
+      if (error) {
+        console.error('Erreur chargement clients:', error)
+        return
+      }
+
+      setClients(data || [])
+    } catch (err) {
+      console.error('Exception chargement clients:', err)
     }
   }
 
@@ -43,17 +52,35 @@ export default function ClientList() {
     e.preventDefault()
     setLoading(true)
 
-    const { data, error } = await supabase
-      .from('clients')
-      .insert([newClient])
-      .select()
+    try {
+      console.log('Ajout client:', newClient)
 
-    if (!error && data) {
-      setClients([data[0], ...clients])
-      setNewClient({ name: '', email: '', phone: '', address: '' })
-      setShowAddClient(false)
+      const { data, error } = await supabase
+        .from('clients')
+        .insert([newClient])
+        .select()
+
+      console.log('Résultat ajout:', { data, error })
+
+      if (error) {
+        console.error('Erreur ajout client:', error)
+        alert(`Erreur: ${error.message}`)
+        setLoading(false)
+        return
+      }
+
+      if (data && data[0]) {
+        await loadClients()
+        setNewClient({ name: '', email: '', phone: '', address: '' })
+        setShowAddClient(false)
+        alert('Client ajouté avec succès!')
+      }
+    } catch (err) {
+      console.error('Exception ajout client:', err)
+      alert('Erreur inattendue: ' + err.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const copyClientLink = (e) => {
@@ -79,18 +106,36 @@ export default function ClientList() {
     e.preventDefault()
     setLoading(true)
 
-    const { data, error } = await supabase
-      .from('clients')
-      .update(editedClient)
-      .eq('id', editingClient.id)
-      .select()
+    try {
+      console.log('Modification client:', { id: editingClient.id, data: editedClient })
 
-    if (!error && data) {
-      setClients(clients.map(c => c.id === editingClient.id ? data[0] : c))
-      setEditingClient(null)
-      setEditedClient({ name: '', email: '', phone: '', address: '' })
+      const { data, error } = await supabase
+        .from('clients')
+        .update(editedClient)
+        .eq('id', editingClient.id)
+        .select()
+
+      console.log('Résultat modification:', { data, error })
+
+      if (error) {
+        console.error('Erreur modification client:', error)
+        alert(`Erreur: ${error.message}`)
+        setLoading(false)
+        return
+      }
+
+      if (data && data[0]) {
+        await loadClients()
+        setEditingClient(null)
+        setEditedClient({ name: '', email: '', phone: '', address: '' })
+        alert('Client modifié avec succès!')
+      }
+    } catch (err) {
+      console.error('Exception modification client:', err)
+      alert('Erreur inattendue: ' + err.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const handleDeleteClient = async (e) => {
@@ -105,33 +150,43 @@ export default function ClientList() {
     setLoading(true)
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
 
-      if (!sessionData.session) {
+      console.log('Session check:', { hasSession: !!sessionData?.session, sessionError })
+
+      if (sessionError || !sessionData?.session) {
         setDeleteError('Session expirée. Reconnectez-vous.')
         setLoading(false)
         return
       }
 
-      const { error } = await supabase
+      console.log('Tentative de suppression du client:', deletingClient.id)
+
+      const { data, error } = await supabase
         .from('clients')
         .delete()
         .eq('id', deletingClient.id)
 
-      setLoading(false)
+      console.log('Résultat suppression:', { data, error })
 
-      if (!error) {
-        await loadClients()
-        setDeletingClient(null)
-        setDeletePassword('')
-        setDeleteError('')
-      } else {
-        console.error('Erreur de suppression:', error)
-        setDeleteError(`Erreur: ${error.message}`)
+      if (error) {
+        console.error('Erreur Supabase:', error)
+        setDeleteError(`Erreur: ${error.message} (Code: ${error.code})`)
+        setLoading(false)
+        return
       }
+
+      console.log('Suppression réussie!')
+      await loadClients()
+      setDeletingClient(null)
+      setDeletePassword('')
+      setDeleteError('')
+      alert('Client supprimé avec succès!')
+
     } catch (err) {
-      console.error('Exception lors de la suppression:', err)
+      console.error('Exception:', err)
       setDeleteError('Erreur inattendue: ' + err.message)
+    } finally {
       setLoading(false)
     }
   }
