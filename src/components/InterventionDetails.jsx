@@ -18,6 +18,8 @@ export default function InterventionDetails() {
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [generatingPDF, setGeneratingPDF] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [closing, setClosing] = useState(false)
 
   useEffect(() => {
     loadInterventionDetails()
@@ -76,27 +78,9 @@ export default function InterventionDetails() {
     }
   }
 
-  const loadLogoAsBase64 = () => {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0)
-        resolve(canvas.toDataURL('image/png'))
-      }
-      img.onerror = reject
-      img.src = '/logo_green_life_(1).webp'
-    })
-  }
-
-  const addFooter = (doc, logoData, pageNumber) => {
+  const addFooter = (doc, pageNumber) => {
     const pageHeight = doc.internal.pageSize.height
     const pageWidth = doc.internal.pageSize.width
-
-    doc.addImage(logoData, 'PNG', 15, pageHeight - 25, 20, 20)
 
     doc.setTextColor(150, 150, 150)
     doc.setFontSize(8)
@@ -104,10 +88,50 @@ export default function InterventionDetails() {
     doc.text(`Page ${pageNumber}`, pageWidth - 20, pageHeight - 10, { align: 'right' })
   }
 
+  const handleDeleteIntervention = async () => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette intervention ?')) {
+      return
+    }
+
+    setDeleting(true)
+
+    const { error } = await supabase
+      .from('interventions')
+      .delete()
+      .eq('id', interventionId)
+
+    if (!error) {
+      navigate('/technicien')
+    } else {
+      alert('Erreur lors de la suppression')
+      setDeleting(false)
+    }
+  }
+
+  const handleCloseIntervention = async () => {
+    if (!confirm('Êtes-vous sûr de vouloir cloturer cette intervention ? Elle deviendra visible pour le client.')) {
+      return
+    }
+
+    setClosing(true)
+
+    const { error } = await supabase
+      .from('interventions')
+      .update({ is_closed: true })
+      .eq('id', interventionId)
+
+    if (!error) {
+      setIntervention({ ...intervention, is_closed: true })
+    } else {
+      alert('Erreur lors de la clôture')
+    }
+
+    setClosing(false)
+  }
+
   const generatePDF = async () => {
     setGeneratingPDF(true)
     try {
-      const logoData = await loadLogoAsBase64()
       const doc = new jsPDF()
       let yPosition = 15
       let pageNumber = 1
@@ -149,7 +173,7 @@ export default function InterventionDetails() {
 
       for (const section of sectionsWithContent) {
         if (yPosition > 230) {
-          addFooter(doc, logoData, pageNumber)
+          addFooter(doc, pageNumber)
           doc.addPage()
           yPosition = 20
           pageNumber++
@@ -191,7 +215,7 @@ export default function InterventionDetails() {
 
           for (const photo of section.photos) {
             if (yPosition > 205) {
-              addFooter(doc, logoData, pageNumber)
+              addFooter(doc, pageNumber)
               doc.addPage()
               yPosition = 20
               pageNumber++
@@ -222,7 +246,7 @@ export default function InterventionDetails() {
         yPosition += 8
       }
 
-      addFooter(doc, logoData, pageNumber)
+      addFooter(doc, pageNumber)
 
       const fileName = `Intervention_${intervention?.clients?.name}_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.pdf`
       doc.save(fileName)
@@ -274,7 +298,7 @@ export default function InterventionDetails() {
         <div style={{ color: '#718096', marginBottom: '8px' }}>
           <strong>Date:</strong> {new Date(intervention?.intervention_date).toLocaleDateString('fr-FR')}
         </div>
-        <div style={{ color: '#718096', marginBottom: '16px' }}>
+        <div style={{ color: '#718096', marginBottom: '8px' }}>
           <strong>Statut:</strong>{' '}
           <span style={{
             padding: '4px 12px',
@@ -288,25 +312,85 @@ export default function InterventionDetails() {
           </span>
         </div>
 
+        <div style={{ color: '#718096', marginBottom: '16px' }}>
+          <strong>Visible client:</strong>{' '}
+          <span style={{
+            padding: '4px 12px',
+            borderRadius: '12px',
+            background: intervention?.is_closed ? '#bee3f8' : '#fed7d7',
+            color: intervention?.is_closed ? '#2c5282' : '#742a2a',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}>
+            {intervention?.is_closed ? 'Oui (Clôturée)' : 'Non'}
+          </span>
+        </div>
+
         {intervention?.status === 'termine' && (
-          <button
-            onClick={generatePDF}
-            disabled={generatingPDF}
-            style={{
-              width: '100%',
-              padding: '14px',
-              background: generatingPDF ? '#a0aec0' : 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
-              color: 'white',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              transition: 'transform 0.2s'
-            }}
-            onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'translateY(-2px)')}
-            onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
-          >
-            {generatingPDF ? 'Génération du PDF...' : '📋 Générer le PDF'}
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={generatePDF}
+              disabled={generatingPDF}
+              style={{
+                flex: 1,
+                padding: '14px',
+                background: generatingPDF ? '#a0aec0' : 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
+                color: 'white',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                transition: 'transform 0.2s'
+              }}
+              onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'translateY(-2px)')}
+              onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              {generatingPDF ? 'Génération du PDF...' : 'Générer le PDF'}
+            </button>
+            <button
+              onClick={intervention?.is_closed ? null : handleCloseIntervention}
+              disabled={closing || intervention?.is_closed}
+              style={{
+                padding: '14px 24px',
+                background: intervention?.is_closed
+                  ? '#e2e8f0'
+                  : closing
+                    ? '#a0aec0'
+                    : 'linear-gradient(135deg, #3182ce 0%, #2c5282 100%)',
+                color: intervention?.is_closed ? '#4a5568' : 'white',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                transition: 'transform 0.2s',
+                cursor: intervention?.is_closed ? 'not-allowed' : 'pointer',
+                opacity: intervention?.is_closed ? 0.7 : 1
+              }}
+              onMouseEnter={(e) => !closing && !intervention?.is_closed && (e.target.style.transform = 'translateY(-2px)')}
+              onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              {intervention?.is_closed
+                ? 'Déjà clôturée'
+                : closing
+                  ? 'Clôture en cours...'
+                  : 'Cloturer'}
+            </button>
+            <button
+              onClick={handleDeleteIntervention}
+              disabled={deleting}
+              style={{
+                padding: '14px 24px',
+                background: deleting ? '#a0aec0' : '#fed7d7',
+                color: '#742a2a',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                transition: 'transform 0.2s'
+              }}
+              onMouseEnter={(e) => !deleting && (e.target.style.transform = 'translateY(-2px)')}
+              onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              {deleting ? 'Suppression...' : 'Supprimer'}
+            </button>
+          </div>
         )}
       </div>
 

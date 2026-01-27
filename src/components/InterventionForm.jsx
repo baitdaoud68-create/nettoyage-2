@@ -27,6 +27,8 @@ export default function InterventionForm() {
   const [saving, setSaving] = useState(false)
   const [generatingGlobalPDF, setGeneratingGlobalPDF] = useState(false)
   const [generatingZonePDF, setGeneratingZonePDF] = useState(null)
+  const [categoryInterventions, setCategoryInterventions] = useState({})
+  const [closingAll, setClosingAll] = useState(false)
 
   useEffect(() => {
     loadChantierAndCategories()
@@ -51,6 +53,22 @@ export default function InterventionForm() {
 
     if (categoriesData) {
       setCategories(categoriesData)
+
+      const { data: interventionsData } = await supabase
+        .from('interventions')
+        .select('id, category_id, is_closed, status')
+        .eq('chantier_id', chantierId)
+
+      const interventionsByCategory = {}
+      if (interventionsData) {
+        interventionsData.forEach(interv => {
+          if (!interventionsByCategory[interv.category_id]) {
+            interventionsByCategory[interv.category_id] = []
+          }
+          interventionsByCategory[interv.category_id].push(interv)
+        })
+      }
+      setCategoryInterventions(interventionsByCategory)
     }
   }
 
@@ -298,27 +316,9 @@ export default function InterventionForm() {
     })
   }
 
-  const loadLogoAsBase64 = () => {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0)
-        resolve(canvas.toDataURL('image/png'))
-      }
-      img.onerror = reject
-      img.src = '/logo_green_life_(1).webp'
-    })
-  }
-
-  const addFooter = (doc, logoData, pageNumber) => {
+  const addFooter = (doc, pageNumber) => {
     const pageHeight = doc.internal.pageSize.height
     const pageWidth = doc.internal.pageSize.width
-
-    doc.addImage(logoData, 'PNG', 15, pageHeight - 25, 20, 20)
 
     doc.setTextColor(150, 150, 150)
     doc.setFontSize(8)
@@ -346,7 +346,6 @@ export default function InterventionForm() {
         return
       }
 
-      const logoData = await loadLogoAsBase64()
       const doc = new jsPDF()
       let yPosition = 15
       let pageNumber = 1
@@ -384,7 +383,7 @@ export default function InterventionForm() {
 
       for (const interv of interventions) {
         if (yPosition > 225) {
-          addFooter(doc, logoData, pageNumber)
+          addFooter(doc, pageNumber)
           doc.addPage()
           yPosition = 20
           pageNumber++
@@ -419,7 +418,7 @@ export default function InterventionForm() {
             }
 
             if (yPosition > 230) {
-              addFooter(doc, logoData, pageNumber)
+              addFooter(doc, pageNumber)
               doc.addPage()
               yPosition = 20
               pageNumber++
@@ -463,7 +462,7 @@ export default function InterventionForm() {
 
               for (const photo of photos) {
                 if (yPosition > 205) {
-                  addFooter(doc, logoData, pageNumber)
+                  addFooter(doc, pageNumber)
                   doc.addPage()
                   yPosition = 20
                   pageNumber++
@@ -496,7 +495,7 @@ export default function InterventionForm() {
         yPosition += 12
       }
 
-      addFooter(doc, logoData, pageNumber)
+      addFooter(doc, pageNumber)
 
       const fileName = `Rapport_Global_${chantier.name}_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.pdf`
       doc.save(fileName)
@@ -528,7 +527,6 @@ export default function InterventionForm() {
         return
       }
 
-      const logoData = await loadLogoAsBase64()
       const doc = new jsPDF()
       let yPosition = 15
       let pageNumber = 1
@@ -571,7 +569,7 @@ export default function InterventionForm() {
 
       for (const interv of interventions) {
         if (yPosition > 230) {
-          addFooter(doc, logoData, pageNumber)
+          addFooter(doc, pageNumber)
           doc.addPage()
           yPosition = 20
           pageNumber++
@@ -600,7 +598,7 @@ export default function InterventionForm() {
             }
 
             if (yPosition > 230) {
-              addFooter(doc, logoData, pageNumber)
+              addFooter(doc, pageNumber)
               doc.addPage()
               yPosition = 20
               pageNumber++
@@ -644,7 +642,7 @@ export default function InterventionForm() {
 
               for (const photo of photos) {
                 if (yPosition > 205) {
-                  addFooter(doc, logoData, pageNumber)
+                  addFooter(doc, pageNumber)
                   doc.addPage()
                   yPosition = 20
                   pageNumber++
@@ -677,7 +675,7 @@ export default function InterventionForm() {
         yPosition += 12
       }
 
-      addFooter(doc, logoData, pageNumber)
+      addFooter(doc, pageNumber)
 
       const fileName = `Rapport_Zone_${categoryName}_${chantier.name}_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.pdf`
       doc.save(fileName)
@@ -687,6 +685,30 @@ export default function InterventionForm() {
     } finally {
       setGeneratingZonePDF(null)
     }
+  }
+
+  const handleCloseAllInterventions = async () => {
+    if (!confirm('Êtes-vous sûr de vouloir clôturer TOUTES les interventions terminées de ce chantier ? Elles deviendront visibles pour le client.')) {
+      return
+    }
+
+    setClosingAll(true)
+
+    const { error } = await supabase
+      .from('interventions')
+      .update({ is_closed: true })
+      .eq('chantier_id', chantierId)
+      .eq('status', 'termine')
+      .eq('is_closed', false)
+
+    if (!error) {
+      alert('Toutes les interventions terminées ont été clôturées avec succès')
+      await loadChantierAndCategories()
+    } else {
+      alert('Erreur lors de la clôture des interventions')
+    }
+
+    setClosingAll(false)
   }
 
   const handleFinishIntervention = async () => {
@@ -700,6 +722,8 @@ export default function InterventionForm() {
     setSections({})
     setSelectedCategory(null)
     setSaving(false)
+
+    await loadChantierAndCategories()
   }
 
   if (!chantier) return <div>Chargement...</div>
@@ -753,6 +777,20 @@ export default function InterventionForm() {
               Sélectionner une zone
             </h3>
             <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleCloseAllInterventions}
+                disabled={closingAll}
+                style={{
+                  background: closingAll ? '#a0aec0' : 'linear-gradient(135deg, #3182ce 0%, #2c5282 100%)',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                {closingAll ? 'Clôture...' : '✓ Clôturer Tout'}
+              </button>
               <button
                 onClick={generateGlobalPDF}
                 disabled={generatingGlobalPDF}
@@ -896,28 +934,71 @@ export default function InterventionForm() {
             gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
             gap: '16px'
           }}>
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                style={{
-                  background: 'white',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.2s, box-shadow 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)'
-                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
-                }}
-              >
-                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1a202c', marginBottom: '12px' }}>
-                  {category.name}
-                </div>
+            {categories.map((category) => {
+              const interventions = categoryInterventions[category.id] || []
+              const hasClosedIntervention = interventions.some(i => i.is_closed)
+              const hasOpenIntervention = interventions.some(i => !i.is_closed && i.status === 'termine')
+
+              return (
+                <div
+                  key={category.id}
+                  style={{
+                    background: 'white',
+                    padding: '20px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    transition: 'transform 0.2s, box-shadow 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)'
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: '#1a202c', marginBottom: '8px' }}>
+                    {category.name}
+                  </div>
+                  <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {hasClosedIntervention && (
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        background: '#bee3f8',
+                        color: '#2c5282',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        Clôturée
+                      </span>
+                    )}
+                    {hasOpenIntervention && (
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        background: '#fed7d7',
+                        color: '#742a2a',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        Non clôturée
+                      </span>
+                    )}
+                    {interventions.length === 0 && (
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        background: '#e2e8f0',
+                        color: '#4a5568',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        Aucune intervention
+                      </span>
+                    )}
+                  </div>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                   <button
                     onClick={() => startIntervention(category.id)}
@@ -977,7 +1058,7 @@ export default function InterventionForm() {
                   {generatingZonePDF === category.id ? 'Génération...' : `📋 PDF ${category.name}`}
                 </button>
               </div>
-            ))}
+            )})}
           </div>
 
           {categories.length === 0 && (

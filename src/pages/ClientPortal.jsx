@@ -36,14 +36,29 @@ export default function ClientPortal() {
     if (clientData) {
       setClient(clientData)
 
-      const { data: chantiersData } = await supabase
+      const { data: allChantiersData } = await supabase
         .from('chantiers')
         .select('*')
         .eq('client_id', clientData.id)
         .order('created_at', { ascending: false })
 
-      if (chantiersData) {
-        setChantiers(chantiersData)
+      if (allChantiersData) {
+        const chantiersWithClosedInterventions = []
+
+        for (const chantier of allChantiersData) {
+          const { data: closedInterventions } = await supabase
+            .from('interventions')
+            .select('id')
+            .eq('chantier_id', chantier.id)
+            .eq('is_closed', true)
+            .limit(1)
+
+          if (closedInterventions && closedInterventions.length > 0) {
+            chantiersWithClosedInterventions.push(chantier)
+          }
+        }
+
+        setChantiers(chantiersWithClosedInterventions)
       }
     }
 
@@ -62,6 +77,7 @@ export default function ClientPortal() {
       `)
       .eq('chantier_id', chantierId)
       .eq('status', 'termine')
+      .eq('is_closed', true)
       .order('intervention_date', { ascending: false })
 
     if (interventionsData) {
@@ -93,90 +109,149 @@ export default function ClientPortal() {
     }
   }
 
-  const loadImageAsBase64 = async (url) => {
-    try {
-      const response = await fetch(url)
-      const blob = await response.blob()
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result)
-        reader.onerror = reject
-        reader.readAsDataURL(blob)
-      })
-    } catch (error) {
-      console.error('Erreur lors du chargement de l\'image:', url, error)
-      throw error
-    }
+  const loadImageAsBase64 = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous'
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/jpeg'))
+      }
+      img.onerror = reject
+      img.src = url
+    })
+  }
+
+  const addFooter = (doc, pageNumber) => {
+    const pageHeight = doc.internal.pageSize.height
+    const pageWidth = doc.internal.pageSize.width
+
+    doc.setTextColor(150, 150, 150)
+    doc.setFontSize(8)
+    doc.text('Green Life - Nettoyage Froid', pageWidth / 2, pageHeight - 10, { align: 'center' })
+    doc.text(`Page ${pageNumber}`, pageWidth - 20, pageHeight - 10, { align: 'right' })
   }
 
   const generatePDF = async () => {
     setGeneratingPDF(true)
     try {
       const doc = new jsPDF()
-      let yPosition = 20
+      let yPosition = 15
+      let pageNumber = 1
 
-      doc.setFontSize(18)
-      doc.text('Rapport d\'Intervention', 105, yPosition, { align: 'center' })
-      yPosition += 10
+      doc.setFillColor(34, 177, 76)
+      doc.rect(0, 0, 210, 35, 'F')
 
-      doc.setFontSize(12)
-      doc.text(`Client: ${client.name}`, 20, yPosition)
-      yPosition += 7
-      doc.text(`Chantier: ${selectedChantier?.name || 'N/A'}`, 20, yPosition)
-      yPosition += 7
-      doc.text(`Rubrique: ${selectedIntervention?.categories?.name || 'N/A'}`, 20, yPosition)
-      yPosition += 7
-      doc.text(`Date: ${new Date(selectedIntervention?.intervention_date).toLocaleDateString('fr-FR')}`, 20, yPosition)
-      yPosition += 15
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(22)
+      doc.setFont(undefined, 'bold')
+      doc.text('RAPPORT D\'INTERVENTION', 105, 15, { align: 'center' })
+
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'normal')
+      doc.text('Green Life - Nettoyage Froid', 105, 25, { align: 'center' })
+
+      yPosition = 45
+
+      doc.setFillColor(29, 53, 87)
+      doc.rect(15, yPosition - 5, 180, 28, 'F')
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.text('CHANTIER:', 20, yPosition + 2)
+      doc.text('CLIENT:', 20, yPosition + 9)
+      doc.text('ZONE:', 20, yPosition + 16)
+
+      doc.setFont(undefined, 'normal')
+      doc.text(`${selectedChantier?.name || 'N/A'}`, 55, yPosition + 2)
+      doc.text(`${client.name}`, 55, yPosition + 9)
+      doc.text(`${selectedIntervention?.categories?.name || 'N/A'}`, 55, yPosition + 16)
+
+      yPosition += 35
 
       for (const section of sections) {
-        if (yPosition > 250) {
-          doc.addPage()
-          yPosition = 20
+        if (!section.notes && (!section.photos || section.photos.length === 0)) {
+          continue
         }
 
-        doc.setFontSize(14)
+        if (yPosition > 230) {
+          addFooter(doc, pageNumber)
+          doc.addPage()
+          yPosition = 20
+          pageNumber++
+        }
+
+        doc.setFillColor(34, 177, 76)
+        doc.rect(20, yPosition - 2, 170, 8, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(11)
         doc.setFont(undefined, 'bold')
-        doc.text(SECTION_LABELS[section.section_type], 20, yPosition)
+        doc.text(SECTION_LABELS[section.section_type], 25, yPosition + 3)
+
+        yPosition += 10
+
+        doc.setTextColor(0, 0, 0)
         doc.setFont(undefined, 'normal')
-        yPosition += 7
 
         if (section.notes) {
-          doc.setFontSize(10)
-          const lines = doc.splitTextToSize(`Notes: ${section.notes}`, 170)
-          doc.text(lines, 20, yPosition)
-          yPosition += lines.length * 5 + 5
+          doc.setFontSize(9)
+          doc.setTextColor(29, 53, 87)
+          doc.setFont(undefined, 'bold')
+          doc.text('Notes:', 25, yPosition)
+          yPosition += 5
+
+          doc.setFont(undefined, 'normal')
+          doc.setTextColor(60, 60, 60)
+          const lines = doc.splitTextToSize(section.notes, 160)
+          doc.text(lines, 25, yPosition)
+          yPosition += lines.length * 4 + 6
         }
 
         if (section.photos && section.photos.length > 0) {
-          doc.setFontSize(10)
-          doc.text(`Photos (${section.photos.length}):`, 20, yPosition)
-          yPosition += 7
+          doc.setTextColor(29, 53, 87)
+          doc.setFont(undefined, 'bold')
+          doc.setFontSize(9)
+          doc.text(`Photos (${section.photos.length}):`, 25, yPosition)
+          yPosition += 6
 
           for (const photo of section.photos) {
-            if (yPosition > 220) {
+            if (yPosition > 205) {
+              addFooter(doc, pageNumber)
               doc.addPage()
               yPosition = 20
+              pageNumber++
             }
 
             try {
               const imgData = await loadImageAsBase64(photo.photo_url)
-              const imgWidth = 80
-              const imgHeight = 60
-              const format = photo.photo_url.toLowerCase().includes('.png') ? 'PNG' : 'JPEG'
-              doc.addImage(imgData, format, 20, yPosition, imgWidth, imgHeight)
-              yPosition += imgHeight + 10
+              const imgWidth = 75
+              const imgHeight = 56
+
+              doc.setDrawColor(34, 177, 76)
+              doc.setLineWidth(0.5)
+              doc.rect(24, yPosition - 1, imgWidth + 2, imgHeight + 2)
+
+              doc.addImage(imgData, 'JPEG', 25, yPosition, imgWidth, imgHeight)
+              yPosition += imgHeight + 7
             } catch (error) {
-              console.error('Erreur chargement image:', error, photo.photo_url)
-              doc.setFontSize(9)
-              doc.text('Image non disponible', 20, yPosition)
-              yPosition += 10
+              console.error('Erreur chargement image:', error)
+              doc.setTextColor(180, 180, 180)
+              doc.text('Image non disponible', 25, yPosition)
+              yPosition += 8
             }
           }
         }
 
-        yPosition += 5
+        yPosition += 6
       }
+
+      addFooter(doc, pageNumber)
 
       const fileName = `Intervention_${client.name}_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.pdf`
       doc.save(fileName)
@@ -228,21 +303,38 @@ export default function ClientPortal() {
   return (
     <div style={{ minHeight: '100vh', background: '#f7fafc' }}>
       <header style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #22b14c 0%, #1d3557 100%)',
         color: 'white',
         padding: '24px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{
           maxWidth: '1200px',
-          margin: '0 auto'
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px'
         }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>
-            Portail Client
-          </h1>
-          <p style={{ fontSize: '16px', opacity: 0.9 }}>
-            {client.name}
-          </p>
+          <img
+            src="/logo_fin.png"
+            alt="Green Life Logo"
+            style={{
+              width: '60px',
+              height: '60px',
+              objectFit: 'contain',
+              background: 'white',
+              borderRadius: '12px',
+              padding: '8px'
+            }}
+          />
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>
+              Portail Client
+            </h1>
+            <p style={{ fontSize: '16px', opacity: 0.9 }}>
+              {client.name}
+            </p>
+          </div>
         </div>
       </header>
 
@@ -332,7 +424,7 @@ export default function ClientPortal() {
                         marginTop: '16px',
                         width: '100%',
                         padding: '10px',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
                         color: 'white',
                         borderRadius: '8px',
                         fontSize: '14px',
@@ -458,7 +550,7 @@ export default function ClientPortal() {
                         marginTop: '16px',
                         width: '100%',
                         padding: '10px',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
                         color: 'white',
                         borderRadius: '8px',
                         fontSize: '14px',
@@ -539,7 +631,7 @@ export default function ClientPortal() {
                 onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'translateY(-2px)')}
                 onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
               >
-                {generatingPDF ? 'Génération du PDF...' : '📄 Télécharger le rapport PDF'}
+                {generatingPDF ? 'Génération du PDF...' : 'Télécharger le rapport PDF'}
               </button>
             </div>
 

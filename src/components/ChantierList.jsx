@@ -20,6 +20,9 @@ export default function ChantierList() {
     description: ''
   })
   const [loading, setLoading] = useState(false)
+  const [showInterventions, setShowInterventions] = useState(false)
+  const [selectedChantierForInterventions, setSelectedChantierForInterventions] = useState(null)
+  const [interventions, setInterventions] = useState([])
 
   useEffect(() => {
     loadClientAndChantiers()
@@ -92,7 +95,214 @@ export default function ChantierList() {
     setLoading(false)
   }
 
+  const handleDeleteChantier = async (chantierId, e) => {
+    e.stopPropagation()
+
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce chantier ? Toutes les interventions associées seront également supprimées.')) {
+      return
+    }
+
+    setLoading(true)
+
+    const { error } = await supabase
+      .from('chantiers')
+      .delete()
+      .eq('id', chantierId)
+
+    if (!error) {
+      setChantiers(chantiers.filter(c => c.id !== chantierId))
+    }
+
+    setLoading(false)
+  }
+
+  const loadChantierInterventions = async (chantier, e) => {
+    e.stopPropagation()
+    setSelectedChantierForInterventions(chantier)
+
+    const { data: interventionsData } = await supabase
+      .from('interventions')
+      .select(`
+        *,
+        categories (name)
+      `)
+      .eq('chantier_id', chantier.id)
+      .eq('status', 'termine')
+      .order('intervention_date', { ascending: false })
+
+    if (interventionsData) {
+      setInterventions(interventionsData)
+    }
+
+    setShowInterventions(true)
+  }
+
+  const handleDeleteIntervention = async (interventionId, e) => {
+    e.stopPropagation()
+
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette intervention ?')) {
+      return
+    }
+
+    setLoading(true)
+
+    const { error } = await supabase
+      .from('interventions')
+      .delete()
+      .eq('id', interventionId)
+
+    if (!error) {
+      setInterventions(interventions.filter(i => i.id !== interventionId))
+    }
+
+    setLoading(false)
+  }
+
   if (!client) return <div>Chargement...</div>
+
+  if (showInterventions) {
+    return (
+      <div>
+        <button
+          onClick={() => {
+            setShowInterventions(false)
+            setSelectedChantierForInterventions(null)
+            setInterventions([])
+          }}
+          style={{
+            background: '#e2e8f0',
+            color: '#4a5568',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '500',
+            marginBottom: '16px'
+          }}
+        >
+          ← Retour aux chantiers
+        </button>
+
+        <div style={{
+          background: 'white',
+          padding: '24px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          marginBottom: '24px'
+        }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px' }}>
+            Interventions terminées
+          </h2>
+          <p style={{ color: '#718096' }}>
+            Chantier: {selectedChantierForInterventions?.name}
+          </p>
+        </div>
+
+        {interventions.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: '#718096',
+            background: 'white',
+            borderRadius: '12px'
+          }}>
+            <p style={{ fontSize: '18px', marginBottom: '16px' }}>
+              Aucune intervention terminée
+            </p>
+            <p>Les interventions terminées apparaîtront ici</p>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '20px'
+          }}>
+            {interventions.map((intervention) => (
+              <div
+                key={intervention.id}
+                style={{
+                  background: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  transition: 'transform 0.2s, box-shadow 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)'
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'start',
+                  marginBottom: '12px'
+                }}>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    color: '#1a202c'
+                  }}>
+                    {intervention.categories?.name || 'Sans rubrique'}
+                  </h3>
+                  <span style={{
+                    padding: '4px 12px',
+                    borderRadius: '12px',
+                    background: '#c6f6d5',
+                    color: '#22543d',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>
+                    Terminé
+                  </span>
+                </div>
+                <div style={{ color: '#718096', fontSize: '14px', marginBottom: '16px' }}>
+                  {new Date(intervention.intervention_date).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => navigate(`/technicien/intervention-details/${intervention.id}`)}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Voir les détails
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteIntervention(intervention.id, e)}
+                    disabled={loading}
+                    style={{
+                      padding: '10px 16px',
+                      background: loading ? '#a0aec0' : '#fed7d7',
+                      color: '#742a2a',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -471,14 +681,14 @@ export default function ChantierList() {
                 {chantier.description}
               </div>
             )}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   navigate(`/technicien/chantier/${chantier.id}/intervention`)
                 }}
                 style={{
-                  flex: 1,
+                  width: '100%',
                   padding: '10px',
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
@@ -487,21 +697,51 @@ export default function ChantierList() {
                   fontWeight: '600'
                 }}
               >
-                Intervention
+                + Nouvelle Intervention
               </button>
-              <button
-                onClick={(e) => handleEditChantier(chantier, e)}
-                style={{
-                  padding: '10px 16px',
-                  background: '#e2e8f0',
-                  color: '#4a5568',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600'
-                }}
-              >
-                ✏️
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={(e) => loadChantierInterventions(chantier, e)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#e8f5e9',
+                    color: '#2e7d32',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  📋 Interventions
+                </button>
+                <button
+                  onClick={(e) => handleEditChantier(chantier, e)}
+                  style={{
+                    padding: '10px 16px',
+                    background: '#e2e8f0',
+                    color: '#4a5568',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={(e) => handleDeleteChantier(chantier.id, e)}
+                  disabled={loading}
+                  style={{
+                    padding: '10px 16px',
+                    background: loading ? '#a0aec0' : '#fed7d7',
+                    color: '#742a2a',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
           </div>
         ))}
