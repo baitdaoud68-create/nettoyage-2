@@ -53,9 +53,9 @@ export default function ClientList() {
     setLoading(false)
   }
 
-  const copyClientLink = (email, e) => {
+  const copyClientLink = (e) => {
     e.stopPropagation()
-    const link = `${window.location.origin}/portail/${encodeURIComponent(email)}`
+    const link = `${window.location.origin}/portail/connexion`
     navigator.clipboard.writeText(link).then(() => {
       alert('Lien copié dans le presse-papiers!')
     })
@@ -505,7 +505,7 @@ export default function ClientList() {
                 Chantiers
               </button>
               <button
-                onClick={(e) => copyClientLink(client.email, e)}
+                onClick={(e) => copyClientLink(e)}
                 style={{
                   padding: '10px 16px',
                   background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',

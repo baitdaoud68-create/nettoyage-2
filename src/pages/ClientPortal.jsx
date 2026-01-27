@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { jsPDF } from 'jspdf'
 
@@ -12,7 +12,8 @@ const SECTION_LABELS = {
 }
 
 export default function ClientPortal() {
-  const { email } = useParams()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState(null)
   const [client, setClient] = useState(null)
   const [chantiers, setChantiers] = useState([])
   const [selectedChantier, setSelectedChantier] = useState(null)
@@ -23,7 +24,18 @@ export default function ClientPortal() {
   const [generatingPDF, setGeneratingPDF] = useState(false)
 
   useEffect(() => {
-    loadClientData()
+    const storedEmail = sessionStorage.getItem('clientEmail')
+    if (!storedEmail) {
+      navigate('/portail/connexion')
+      return
+    }
+    setEmail(storedEmail)
+  }, [navigate])
+
+  useEffect(() => {
+    if (email) {
+      loadClientData()
+    }
   }, [email])
 
   const loadClientData = async () => {

@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import TechnicianApp from './pages/TechnicianApp'
 import ClientPortal from './pages/ClientPortal'
+import ClientLogin from './pages/ClientLogin'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -45,7 +46,9 @@ function App() {
           path="/technicien/*"
           element={session ? <TechnicianApp /> : <Navigate to="/login" />}
         />
-        <Route path="/portail/:email" element={<ClientPortal />} />
+        <Route path="/portail/connexion" element={<ClientLogin />} />
+        <Route path="/portail/:email" element={<Navigate to="/portail/connexion" />} />
+        <Route path="/portail" element={<ClientPortal />} />
         <Route path="/" element={<Navigate to={session ? "/technicien" : "/login"} />} />
       </Routes>
     </BrowserRouter>
