@@ -104,20 +104,35 @@ export default function ClientList() {
 
     setLoading(true)
 
-    const { error } = await supabase
-      .from('clients')
-      .delete()
-      .eq('id', deletingClient.id)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
 
-    setLoading(false)
+      if (!sessionData.session) {
+        setDeleteError('Session expirée. Reconnectez-vous.')
+        setLoading(false)
+        return
+      }
 
-    if (!error) {
-      setClients(clients.filter(c => c.id !== deletingClient.id))
-      setDeletingClient(null)
-      setDeletePassword('')
-    } else {
-      console.error('Erreur de suppression:', error)
-      setDeleteError('Erreur lors de la suppression: ' + error.message)
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', deletingClient.id)
+
+      setLoading(false)
+
+      if (!error) {
+        await loadClients()
+        setDeletingClient(null)
+        setDeletePassword('')
+        setDeleteError('')
+      } else {
+        console.error('Erreur de suppression:', error)
+        setDeleteError(`Erreur: ${error.message}`)
+      }
+    } catch (err) {
+      console.error('Exception lors de la suppression:', err)
+      setDeleteError('Erreur inattendue: ' + err.message)
+      setLoading(false)
     }
   }
 
