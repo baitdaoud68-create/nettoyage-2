@@ -27,39 +27,25 @@ export default function ClientPortal() {
   }, [accessCode])
 
   const loadClientData = async () => {
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('access_code', accessCode)
-      .maybeSingle()
+    try {
+      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?access_code=${accessCode}&action=get_chantiers`
 
-    if (clientData) {
-      setClient(clientData)
-
-      const { data: allChantiersData } = await supabase
-        .from('chantiers')
-        .select('*')
-        .eq('client_id', clientData.id)
-        .order('created_at', { ascending: false })
-
-      if (allChantiersData) {
-        const chantiersWithClosedInterventions = []
-
-        for (const chantier of allChantiersData) {
-          const { data: closedInterventions } = await supabase
-            .from('interventions')
-            .select('id')
-            .eq('chantier_id', chantier.id)
-            .eq('is_closed', true)
-            .limit(1)
-
-          if (closedInterventions && closedInterventions.length > 0) {
-            chantiersWithClosedInterventions.push(chantier)
-          }
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${supabase.supabaseKey}`,
         }
+      })
 
-        setChantiers(chantiersWithClosedInterventions)
+      if (response.ok) {
+        const data = await response.json()
+        setClient(data.client)
+        setChantiers(data.chantiers || [])
+      } else {
+        setClient(null)
       }
+    } catch (error) {
+      console.error('Erreur lors du chargement:', error)
+      setClient(null)
     }
 
     setLoading(false)
@@ -69,19 +55,21 @@ export default function ClientPortal() {
     const chantier = chantiers.find(c => c.id === chantierId)
     setSelectedChantier(chantier)
 
-    const { data: interventionsData } = await supabase
-      .from('interventions')
-      .select(`
-        *,
-        categories (name)
-      `)
-      .eq('chantier_id', chantierId)
-      .eq('status', 'termine')
-      .eq('is_closed', true)
-      .order('intervention_date', { ascending: false })
+    try {
+      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?access_code=${accessCode}&action=get_interventions&chantier_id=${chantierId}`
 
-    if (interventionsData) {
-      setInterventions(interventionsData)
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${supabase.supabaseKey}`,
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setInterventions(data.interventions || [])
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des interventions:', error)
     }
   }
 
@@ -89,23 +77,21 @@ export default function ClientPortal() {
     const intervention = interventions.find(i => i.id === interventionId)
     setSelectedIntervention(intervention)
 
-    const { data: sectionsData } = await supabase
-      .from('intervention_sections')
-      .select('*')
-      .eq('intervention_id', interventionId)
+    try {
+      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?access_code=${accessCode}&action=get_intervention_details&intervention_id=${interventionId}`
 
-    if (sectionsData) {
-      const sectionsWithPhotos = await Promise.all(
-        sectionsData.map(async (section) => {
-          const { data: photos } = await supabase
-            .from('section_photos')
-            .select('*')
-            .eq('section_id', section.id)
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${supabase.supabaseKey}`,
+        }
+      })
 
-          return { ...section, photos: photos || [] }
-        })
-      )
-      setSections(sectionsWithPhotos)
+      if (response.ok) {
+        const data = await response.json()
+        setSections(data.sections || [])
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des détails:', error)
     }
   }
 
