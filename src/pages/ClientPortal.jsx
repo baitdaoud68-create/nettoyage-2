@@ -12,7 +12,7 @@ const SECTION_LABELS = {
 }
 
 export default function ClientPortal() {
-  const { clientEmail } = useParams()
+  const { accessCode } = useParams()
   const [client, setClient] = useState(null)
   const [chantiers, setChantiers] = useState([])
   const [selectedChantier, setSelectedChantier] = useState(null)
@@ -24,13 +24,13 @@ export default function ClientPortal() {
 
   useEffect(() => {
     loadClientData()
-  }, [clientEmail])
+  }, [accessCode])
 
   const loadClientData = async () => {
     const { data: clientData } = await supabase
       .from('clients')
       .select('*')
-      .eq('email', decodeURIComponent(clientEmail))
+      .eq('access_code', accessCode)
       .maybeSingle()
 
     if (clientData) {
@@ -290,10 +290,10 @@ export default function ClientPortal() {
           maxWidth: '500px'
         }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#1a202c' }}>
-            Client non trouvé
+            Accès non autorisé
           </h2>
           <p style={{ color: '#718096' }}>
-            Aucun client trouvé avec cet email. Veuillez vérifier le lien.
+            Le code d'accès est invalide. Veuillez vérifier votre lien.
           </p>
         </div>
       </div>

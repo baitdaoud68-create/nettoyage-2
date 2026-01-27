@@ -45,7 +45,7 @@ function App() {
           path="/technicien/*"
           element={session ? <TechnicianApp /> : <Navigate to="/login" />}
         />
-        <Route path="/client/:clientEmail" element={<ClientPortal />} />
+        <Route path="/portail/:accessCode" element={<ClientPortal />} />
         <Route path="/" element={<Navigate to={session ? "/technicien" : "/login"} />} />
       </Routes>
     </BrowserRouter>
