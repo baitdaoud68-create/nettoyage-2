@@ -16,12 +16,12 @@ Deno.serve(async (req: Request) => {
 
   try {
     const url = new URL(req.url);
-    const accessCode = url.searchParams.get("access_code");
+    const email = url.searchParams.get("email");
     const action = url.searchParams.get("action");
 
-    if (!accessCode) {
+    if (!email) {
       return new Response(
-        JSON.stringify({ error: "Code d'accès requis" }),
+        JSON.stringify({ error: "Email requis" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -37,12 +37,12 @@ Deno.serve(async (req: Request) => {
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("*")
-      .eq("access_code", accessCode)
+      .eq("email", email)
       .maybeSingle();
 
     if (clientError || !client) {
       return new Response(
-        JSON.stringify({ error: "Code d'accès invalide" }),
+        JSON.stringify({ error: "Email invalide" }),
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

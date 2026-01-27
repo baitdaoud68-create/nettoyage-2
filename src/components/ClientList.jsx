@@ -40,10 +40,9 @@ export default function ClientList() {
     e.preventDefault()
     setLoading(true)
 
-    const accessCode = generateAccessCode()
     const { data, error } = await supabase
       .from('clients')
-      .insert([{ ...newClient, access_code: accessCode }])
+      .insert([newClient])
       .select()
 
     if (!error && data) {
@@ -54,15 +53,9 @@ export default function ClientList() {
     setLoading(false)
   }
 
-  const generateAccessCode = () => {
-    return Array.from({ length: 12 }, () =>
-      '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 36)]
-    ).join('')
-  }
-
-  const copyClientLink = (accessCode, e) => {
+  const copyClientLink = (email, e) => {
     e.stopPropagation()
-    const link = `${window.location.origin}/portail/${accessCode}`
+    const link = `${window.location.origin}/portail/${encodeURIComponent(email)}`
     navigator.clipboard.writeText(link).then(() => {
       alert('Lien copié dans le presse-papiers!')
     })
@@ -493,27 +486,6 @@ export default function ClientList() {
                 {client.address}
               </div>
             )}
-            {client.access_code && (
-              <div style={{
-                marginTop: '12px',
-                padding: '12px',
-                background: '#f7fafc',
-                borderRadius: '8px',
-                fontSize: '12px'
-              }}>
-                <div style={{ color: '#4a5568', fontWeight: '500', marginBottom: '4px' }}>
-                  Code d'accès:
-                </div>
-                <div style={{
-                  color: '#22b14c',
-                  fontWeight: '700',
-                  fontSize: '14px',
-                  letterSpacing: '1px'
-                }}>
-                  {client.access_code}
-                </div>
-              </div>
-            )}
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
               <button
                 onClick={(e) => {
@@ -532,22 +504,20 @@ export default function ClientList() {
               >
                 Chantiers
               </button>
-              {client.access_code && (
-                <button
-                  onClick={(e) => copyClientLink(client.access_code, e)}
-                  style={{
-                    padding: '10px 16px',
-                    background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
-                    color: 'white',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                  title="Copier le lien du portail client"
-                >
-                  🔗
-                </button>
-              )}
+              <button
+                onClick={(e) => copyClientLink(client.email, e)}
+                style={{
+                  padding: '10px 16px',
+                  background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+                title="Copier le lien du portail client"
+              >
+                🔗
+              </button>
               <button
                 onClick={(e) => handleEditClient(client, e)}
                 style={{

@@ -12,7 +12,7 @@ const SECTION_LABELS = {
 }
 
 export default function ClientPortal() {
-  const { accessCode } = useParams()
+  const { email } = useParams()
   const [client, setClient] = useState(null)
   const [chantiers, setChantiers] = useState([])
   const [selectedChantier, setSelectedChantier] = useState(null)
@@ -24,11 +24,11 @@ export default function ClientPortal() {
 
   useEffect(() => {
     loadClientData()
-  }, [accessCode])
+  }, [email])
 
   const loadClientData = async () => {
     try {
-      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?access_code=${accessCode}&action=get_chantiers`
+      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_chantiers`
 
       const response = await fetch(apiUrl, {
         headers: {
@@ -56,7 +56,7 @@ export default function ClientPortal() {
     setSelectedChantier(chantier)
 
     try {
-      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?access_code=${accessCode}&action=get_interventions&chantier_id=${chantierId}`
+      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_interventions&chantier_id=${chantierId}`
 
       const response = await fetch(apiUrl, {
         headers: {
@@ -78,7 +78,7 @@ export default function ClientPortal() {
     setSelectedIntervention(intervention)
 
     try {
-      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?access_code=${accessCode}&action=get_intervention_details&intervention_id=${interventionId}`
+      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_intervention_details&intervention_id=${interventionId}`
 
       const response = await fetch(apiUrl, {
         headers: {
@@ -310,7 +310,7 @@ export default function ClientPortal() {
             Accès restreint
           </h2>
           <p style={{ color: '#718096', fontSize: '16px', lineHeight: '1.6' }}>
-            Le lien d'accès que vous utilisez n'est pas valide. Veuillez contacter votre interlocuteur chez Green Life pour obtenir un nouveau lien d'accès sécurisé.
+            L'adresse email utilisée n'est pas valide ou n'est pas enregistrée dans notre système. Veuillez contacter votre interlocuteur chez Green Life.
           </p>
         </div>
       </div>
