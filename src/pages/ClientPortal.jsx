@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { jsPDF } from 'jspdf'
 
 const SECTION_LABELS = {
@@ -40,11 +40,11 @@ export default function ClientPortal() {
 
   const loadClientData = async () => {
     try {
-      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_chantiers`
+      const apiUrl = `${supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_chantiers`
 
       const response = await fetch(apiUrl, {
         headers: {
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
         }
       })
 
@@ -68,11 +68,11 @@ export default function ClientPortal() {
     setSelectedChantier(chantier)
 
     try {
-      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_interventions&chantier_id=${chantierId}`
+      const apiUrl = `${supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_interventions&chantier_id=${chantierId}`
 
       const response = await fetch(apiUrl, {
         headers: {
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
         }
       })
 
@@ -90,11 +90,11 @@ export default function ClientPortal() {
     setSelectedIntervention(intervention)
 
     try {
-      const apiUrl = `${supabase.supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_intervention_details&intervention_id=${interventionId}`
+      const apiUrl = `${supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_intervention_details&intervention_id=${interventionId}`
 
       const response = await fetch(apiUrl, {
         headers: {
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
         }
       })
 
