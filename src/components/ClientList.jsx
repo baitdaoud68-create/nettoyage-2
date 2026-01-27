@@ -28,14 +28,18 @@ export default function ClientList() {
     loadClients()
   }, [])
 
-  const loadClients = async () => {
+  const loadClients = async (forceRefresh = false) => {
     try {
+      if (forceRefresh) {
+        setClients([])
+      }
+
       const { data, error } = await supabase
         .from('clients')
         .select('*')
         .order('created_at', { ascending: false })
 
-      console.log('Load clients:', { count: data?.length, error })
+      console.log('Load clients:', { count: data?.length, error, timestamp: new Date().toISOString() })
 
       if (error) {
         console.error('Erreur chargement clients:', error)
@@ -70,7 +74,7 @@ export default function ClientList() {
       }
 
       if (data && data[0]) {
-        await loadClients()
+        await loadClients(true)
         setNewClient({ name: '', email: '', phone: '', address: '' })
         setShowAddClient(false)
         alert('Client ajouté avec succès!')
@@ -125,7 +129,7 @@ export default function ClientList() {
       }
 
       if (data && data[0]) {
-        await loadClients()
+        await loadClients(true)
         setEditingClient(null)
         setEditedClient({ name: '', email: '', phone: '', address: '' })
         alert('Client modifié avec succès!')
@@ -181,7 +185,7 @@ export default function ClientList() {
       setClients([])
 
       setTimeout(async () => {
-        await loadClients()
+        await loadClients(true)
         setDeletingClient(null)
         setDeletePassword('')
         setDeleteError('')
