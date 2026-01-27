@@ -177,10 +177,16 @@ export default function ClientList() {
       }
 
       console.log('Suppression réussie!')
-      await loadClients()
-      setDeletingClient(null)
-      setDeletePassword('')
-      setDeleteError('')
+
+      setClients([])
+
+      setTimeout(async () => {
+        await loadClients()
+        setDeletingClient(null)
+        setDeletePassword('')
+        setDeleteError('')
+      }, 100)
+
       alert('Client supprimé avec succès!')
 
     } catch (err) {
