@@ -255,9 +255,22 @@ export default function ClientPortal() {
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #f8fffe 0%, #e8f5f0 100%)'
       }}>
-        Chargement...
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '4px solid #e2e8f0',
+            borderTop: '4px solid #22b14c',
+            borderRadius: '50%',
+            margin: '0 auto 20px',
+            animation: 'spin 1s linear infinite'
+          }} />
+          <p style={{ color: '#4a5568', fontSize: '16px', fontWeight: '500' }}>Chargement de votre espace...</p>
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        </div>
       </div>
     )
   }
@@ -269,17 +282,35 @@ export default function ClientPortal() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px'
+        padding: '20px',
+        background: 'linear-gradient(135deg, #f8fffe 0%, #e8f5f0 100%)'
       }}>
         <div style={{
           textAlign: 'center',
-          maxWidth: '500px'
+          maxWidth: '600px',
+          background: 'white',
+          padding: '60px 40px',
+          borderRadius: '20px',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.08)'
         }}>
-          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#1a202c' }}>
-            Accès non autorisé
+          <div style={{
+            width: '80px',
+            height: '80px',
+            background: 'linear-gradient(135deg, #fee 0%, #fdd 100%)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px',
+            fontSize: '40px'
+          }}>
+            🔒
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '16px', color: '#1a202c', lineHeight: '1.3' }}>
+            Accès restreint
           </h2>
-          <p style={{ color: '#718096' }}>
-            Le code d'accès est invalide. Veuillez vérifier votre lien.
+          <p style={{ color: '#718096', fontSize: '16px', lineHeight: '1.6' }}>
+            Le lien d'accès que vous utilisez n'est pas valide. Veuillez contacter votre interlocuteur chez Green Life pour obtenir un nouveau lien d'accès sécurisé.
           </p>
         </div>
       </div>
@@ -287,77 +318,125 @@ export default function ClientPortal() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f7fafc' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fffe 0%, #e8f5f0 100%)' }}>
       <header style={{
-        background: 'linear-gradient(135deg, #22b14c 0%, #1d3557 100%)',
-        color: 'white',
-        padding: '24px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        background: 'white',
+        borderBottom: '1px solid rgba(34, 177, 76, 0.1)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.04)'
       }}>
         <div style={{
-          maxWidth: '1200px',
+          maxWidth: '1400px',
           margin: '0 auto',
+          padding: '20px 40px',
           display: 'flex',
           alignItems: 'center',
-          gap: '20px'
+          justifyContent: 'space-between'
         }}>
-          <img
-            src="/logo_fin.png"
-            alt="Green Life Logo"
-            style={{
-              width: '60px',
-              height: '60px',
-              objectFit: 'contain',
-              background: 'white',
-              borderRadius: '12px',
-              padding: '8px'
-            }}
-          />
-          <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>
-              Portail Client
-            </h1>
-            <p style={{ fontSize: '16px', opacity: 0.9 }}>
-              {client.name}
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <img
+              src="/logo_fin.png"
+              alt="Green Life Logo"
+              style={{
+                width: '70px',
+                height: '70px',
+                objectFit: 'contain'
+              }}
+            />
+            <div>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#22b14c',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                marginBottom: '4px'
+              }}>
+                Espace Client Sécurisé
+              </div>
+              <h1 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#1a202c',
+                margin: 0
+              }}>
+                {client.name}
+              </h1>
+            </div>
+          </div>
+          <div style={{
+            padding: '10px 20px',
+            background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span style={{ fontSize: '20px' }}>✓</span>
+            <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>Accès vérifié</span>
           </div>
         </div>
       </header>
 
       <main style={{
-        maxWidth: '1200px',
+        maxWidth: '1400px',
         margin: '0 auto',
-        padding: '24px'
+        padding: '48px 40px'
       }}>
         {!selectedChantier && !selectedIntervention ? (
           <div>
-            <h2 style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              marginBottom: '24px',
-              color: '#1a202c'
-            }}>
-              Mes Chantiers
-            </h2>
+            <div style={{ marginBottom: '40px' }}>
+              <h2 style={{
+                fontSize: '36px',
+                fontWeight: '700',
+                marginBottom: '12px',
+                color: '#1a202c',
+                lineHeight: '1.2'
+              }}>
+                Vos Projets
+              </h2>
+              <p style={{
+                fontSize: '18px',
+                color: '#718096',
+                lineHeight: '1.6'
+              }}>
+                Consultez l'historique complet de vos interventions et téléchargez vos rapports
+              </p>
+            </div>
 
             {chantiers.length === 0 ? (
               <div style={{
                 background: 'white',
-                padding: '60px 20px',
-                borderRadius: '12px',
+                padding: '80px 40px',
+                borderRadius: '20px',
                 textAlign: 'center',
-                color: '#718096'
+                boxShadow: '0 10px 40px rgba(0,0,0,0.06)',
+                border: '2px dashed #e2e8f0'
               }}>
-                <p style={{ fontSize: '18px', marginBottom: '8px' }}>
-                  Aucun chantier disponible
+                <div style={{
+                  width: '100px',
+                  height: '100px',
+                  background: 'linear-gradient(135deg, #e8f5f0 0%, #d4ede3 100%)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 24px',
+                  fontSize: '48px'
+                }}>
+                  📋
+                </div>
+                <p style={{ fontSize: '22px', fontWeight: '600', marginBottom: '12px', color: '#2d3748' }}>
+                  Aucun projet disponible
                 </p>
-                <p>Vos chantiers apparaîtront ici</p>
+                <p style={{ fontSize: '16px', color: '#718096', lineHeight: '1.6' }}>
+                  Vos projets terminés apparaîtront ici avec tous les détails de nos interventions
+                </p>
               </div>
             ) : (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '20px'
+                gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
+                gap: '28px'
               }}>
                 {chantiers.map((chantier) => (
                   <div
@@ -365,59 +444,94 @@ export default function ClientPortal() {
                     onClick={() => loadChantierInterventions(chantier.id)}
                     style={{
                       background: 'white',
-                      padding: '24px',
-                      borderRadius: '12px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      padding: '32px',
+                      borderRadius: '16px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
                       cursor: 'pointer',
-                      transition: 'transform 0.2s, box-shadow 0.2s'
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      border: '1px solid rgba(34, 177, 76, 0.1)',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-4px)'
-                      e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
+                      e.currentTarget.style.transform = 'translateY(-8px)'
+                      e.currentTarget.style.boxShadow = '0 20px 50px rgba(34, 177, 76, 0.15)'
+                      e.currentTarget.style.borderColor = 'rgba(34, 177, 76, 0.3)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)'
+                      e.currentTarget.style.borderColor = 'rgba(34, 177, 76, 0.1)'
                     }}
                   >
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      width: '100px',
+                      height: '100px',
+                      background: 'linear-gradient(135deg, rgba(34, 177, 76, 0.05) 0%, rgba(29, 158, 62, 0.02) 100%)',
+                      borderRadius: '0 0 0 100%'
+                    }} />
+                    <div style={{
+                      fontSize: '40px',
+                      marginBottom: '20px'
+                    }}>
+                      🏢
+                    </div>
                     <h3 style={{
-                      fontSize: '18px',
+                      fontSize: '22px',
                       fontWeight: '700',
                       color: '#1a202c',
-                      marginBottom: '12px'
+                      marginBottom: '16px',
+                      lineHeight: '1.3'
                     }}>
                       {chantier.name}
                     </h3>
                     {chantier.address && (
-                      <div style={{ color: '#718096', fontSize: '14px', marginBottom: '8px' }}>
+                      <div style={{
+                        color: '#718096',
+                        fontSize: '15px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span style={{ fontSize: '18px' }}>📍</span>
                         {chantier.address}
                       </div>
                     )}
                     {chantier.description && (
                       <div style={{
                         color: '#4a5568',
-                        fontSize: '14px',
-                        marginTop: '12px',
-                        padding: '12px',
-                        background: '#f7fafc',
-                        borderRadius: '8px'
+                        fontSize: '15px',
+                        marginTop: '16px',
+                        padding: '16px',
+                        background: 'linear-gradient(135deg, #f8fffe 0%, #f0faf7 100%)',
+                        borderRadius: '10px',
+                        lineHeight: '1.6',
+                        borderLeft: '3px solid #22b14c'
                       }}>
                         {chantier.description}
                       </div>
                     )}
                     <button
                       style={{
-                        marginTop: '16px',
+                        marginTop: '24px',
                         width: '100%',
-                        padding: '10px',
+                        padding: '14px 20px',
                         background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
                         color: 'white',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: '600'
+                        borderRadius: '10px',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(34, 177, 76, 0.3)'
                       }}
                     >
-                      Voir les interventions
+                      Consulter les interventions →
                     </button>
                   </div>
                 ))}
@@ -432,52 +546,97 @@ export default function ClientPortal() {
                 setInterventions([])
               }}
               style={{
-                background: '#e2e8f0',
+                background: 'white',
                 color: '#4a5568',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '16px'
+                padding: '12px 20px',
+                borderRadius: '10px',
+                fontSize: '15px',
+                fontWeight: '600',
+                marginBottom: '32px',
+                border: '1px solid #e2e8f0',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#f7fafc'
+                e.target.style.borderColor = '#cbd5e0'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'white'
+                e.target.style.borderColor = '#e2e8f0'
               }}
             >
-              ← Retour aux chantiers
+              ← Retour aux projets
             </button>
 
-            <h2 style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              marginBottom: '8px',
-              color: '#1a202c'
+            <div style={{
+              background: 'white',
+              padding: '40px',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+              marginBottom: '40px',
+              border: '1px solid rgba(34, 177, 76, 0.1)'
             }}>
-              {selectedChantier.name}
-            </h2>
-            <p style={{
-              fontSize: '16px',
-              color: '#718096',
-              marginBottom: '24px'
-            }}>
-              Interventions terminées
-            </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '48px' }}>🏢</div>
+                <div>
+                  <h2 style={{
+                    fontSize: '32px',
+                    fontWeight: '700',
+                    marginBottom: '8px',
+                    color: '#1a202c',
+                    lineHeight: '1.2'
+                  }}>
+                    {selectedChantier.name}
+                  </h2>
+                  <p style={{
+                    fontSize: '16px',
+                    color: '#718096',
+                    margin: 0
+                  }}>
+                    Historique des interventions terminées
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {interventions.length === 0 ? (
               <div style={{
                 background: 'white',
-                padding: '60px 20px',
-                borderRadius: '12px',
+                padding: '80px 40px',
+                borderRadius: '20px',
                 textAlign: 'center',
-                color: '#718096'
+                boxShadow: '0 10px 40px rgba(0,0,0,0.06)',
+                border: '2px dashed #e2e8f0'
               }}>
-                <p style={{ fontSize: '18px', marginBottom: '8px' }}>
+                <div style={{
+                  width: '100px',
+                  height: '100px',
+                  background: 'linear-gradient(135deg, #e8f5f0 0%, #d4ede3 100%)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 24px',
+                  fontSize: '48px'
+                }}>
+                  📄
+                </div>
+                <p style={{ fontSize: '22px', fontWeight: '600', marginBottom: '12px', color: '#2d3748' }}>
                   Aucune intervention disponible
                 </p>
-                <p>Les interventions terminées apparaîtront ici</p>
+                <p style={{ fontSize: '16px', color: '#718096', lineHeight: '1.6' }}>
+                  Les interventions terminées sur ce chantier apparaîtront ici
+                </p>
               </div>
             ) : (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '20px'
+                gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                gap: '24px'
               }}>
                 {interventions.map((intervention) => (
                   <div
@@ -485,46 +644,65 @@ export default function ClientPortal() {
                     onClick={() => loadInterventionDetails(intervention.id)}
                     style={{
                       background: 'white',
-                      padding: '24px',
-                      borderRadius: '12px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      padding: '28px',
+                      borderRadius: '16px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
                       cursor: 'pointer',
-                      transition: 'transform 0.2s, box-shadow 0.2s'
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      border: '1px solid rgba(34, 177, 76, 0.1)',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-4px)'
-                      e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
+                      e.currentTarget.style.transform = 'translateY(-6px)'
+                      e.currentTarget.style.boxShadow = '0 20px 50px rgba(34, 177, 76, 0.15)'
+                      e.currentTarget.style.borderColor = 'rgba(34, 177, 76, 0.3)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)'
+                      e.currentTarget.style.borderColor = 'rgba(34, 177, 76, 0.1)'
                     }}
                   >
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'start',
-                      marginBottom: '12px'
+                      marginBottom: '20px'
                     }}>
-                      <h3 style={{
-                        fontSize: '18px',
-                        fontWeight: '700',
-                        color: '#1a202c'
-                      }}>
-                        {intervention.categories?.name || 'Sans rubrique'}
-                      </h3>
+                      <div>
+                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>✅</div>
+                        <h3 style={{
+                          fontSize: '20px',
+                          fontWeight: '700',
+                          color: '#1a202c',
+                          lineHeight: '1.3'
+                        }}>
+                          {intervention.categories?.name || 'Sans rubrique'}
+                        </h3>
+                      </div>
                       <span style={{
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        background: '#c6f6d5',
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        background: 'linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%)',
                         color: '#22543d',
-                        fontSize: '12px',
-                        fontWeight: '600'
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
                       }}>
                         Terminé
                       </span>
                     </div>
-                    <div style={{ color: '#718096', fontSize: '14px' }}>
+                    <div style={{
+                      color: '#718096',
+                      fontSize: '15px',
+                      marginBottom: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span style={{ fontSize: '18px' }}>📅</span>
                       {new Date(intervention.intervention_date).toLocaleDateString('fr-FR', {
                         day: 'numeric',
                         month: 'long',
@@ -533,17 +711,20 @@ export default function ClientPortal() {
                     </div>
                     <button
                       style={{
-                        marginTop: '16px',
                         width: '100%',
-                        padding: '10px',
+                        padding: '14px 20px',
                         background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
                         color: 'white',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: '600'
+                        borderRadius: '10px',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(34, 177, 76, 0.3)'
                       }}
                     >
-                      Voir les détails
+                      Voir le rapport complet →
                     </button>
                   </div>
                 ))}
@@ -558,67 +739,120 @@ export default function ClientPortal() {
                 setSections([])
               }}
               style={{
-                background: '#e2e8f0',
+                background: 'white',
                 color: '#4a5568',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '16px'
+                padding: '12px 20px',
+                borderRadius: '10px',
+                fontSize: '15px',
+                fontWeight: '600',
+                marginBottom: '32px',
+                border: '1px solid #e2e8f0',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#f7fafc'
+                e.target.style.borderColor = '#cbd5e0'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'white'
+                e.target.style.borderColor = '#e2e8f0'
               }}
             >
-              ← Retour aux interventions du chantier
+              ← Retour aux interventions
             </button>
 
             <div style={{
-              background: 'white',
-              padding: '24px',
-              borderRadius: '12px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              marginBottom: '24px'
+              background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+              padding: '40px',
+              borderRadius: '20px',
+              boxShadow: '0 10px 40px rgba(34, 177, 76, 0.2)',
+              marginBottom: '32px',
+              color: 'white'
             }}>
-              <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '16px' }}>
-                {selectedIntervention.categories?.name}
-              </h2>
-              <div style={{ color: '#718096', marginBottom: '8px' }}>
-                <strong>Date:</strong> {new Date(selectedIntervention.intervention_date).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
+              <div style={{
+                display: 'flex',
+                alignItems: 'start',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '24px'
+              }}>
+                <div style={{ flex: '1', minWidth: '300px' }}>
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase',
+                    marginBottom: '12px',
+                    opacity: 0.9
+                  }}>
+                    Rapport d'intervention
+                  </div>
+                  <h2 style={{
+                    fontSize: '32px',
+                    fontWeight: '700',
+                    marginBottom: '16px',
+                    lineHeight: '1.2'
+                  }}>
+                    {selectedIntervention.categories?.name}
+                  </h2>
+                  <div style={{
+                    fontSize: '16px',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    opacity: 0.95
+                  }}>
+                    <span style={{ fontSize: '20px' }}>📅</span>
+                    {new Date(selectedIntervention.intervention_date).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </div>
+                  <div style={{
+                    display: 'inline-block',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    ✓ Terminé
+                  </div>
+                </div>
+                <button
+                  onClick={generatePDF}
+                  disabled={generatingPDF}
+                  style={{
+                    padding: '16px 32px',
+                    background: generatingPDF ? 'rgba(255, 255, 255, 0.3)' : 'white',
+                    color: generatingPDF ? 'rgba(255, 255, 255, 0.7)' : '#22b14c',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: generatingPDF ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.3s',
+                    boxShadow: generatingPDF ? 'none' : '0 8px 24px rgba(0, 0, 0, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'translateY(-3px)', e.target.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.2)')}
+                  onMouseLeave={(e) => !generatingPDF && (e.target.style.transform = 'translateY(0)', e.target.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15)')}
+                >
+                  <span style={{ fontSize: '24px' }}>{generatingPDF ? '⏳' : '📄'}</span>
+                  {generatingPDF ? 'Génération...' : 'Télécharger PDF'}
+                </button>
               </div>
-              <div style={{ color: '#718096', marginBottom: '16px' }}>
-                <strong>Statut:</strong>{' '}
-                <span style={{
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  background: '#c6f6d5',
-                  color: '#22543d',
-                  fontSize: '14px',
-                  fontWeight: '600'
-                }}>
-                  Terminé
-                </span>
-              </div>
-
-              <button
-                onClick={generatePDF}
-                disabled={generatingPDF}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: generatingPDF ? '#a0aec0' : 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
-                  color: 'white',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  transition: 'transform 0.2s'
-                }}
-                onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'translateY(-2px)')}
-                onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
-              >
-                {generatingPDF ? 'Génération du PDF...' : 'Télécharger le rapport PDF'}
-              </button>
             </div>
 
             {sections.map((section) => (
@@ -626,36 +860,53 @@ export default function ClientPortal() {
                 key={section.id}
                 style={{
                   background: 'white',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  marginBottom: '20px'
+                  padding: '32px',
+                  borderRadius: '16px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                  marginBottom: '24px',
+                  border: '1px solid rgba(34, 177, 76, 0.1)'
                 }}
               >
-                <h4 style={{
-                  fontSize: '18px',
-                  fontWeight: '700',
-                  marginBottom: '16px',
-                  color: '#1a202c'
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '24px',
+                  paddingBottom: '20px',
+                  borderBottom: '2px solid #f0faf7'
                 }}>
-                  {SECTION_LABELS[section.section_type]}
-                </h4>
+                  <span style={{ fontSize: '32px' }}>📋</span>
+                  <h4 style={{
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: '#1a202c',
+                    margin: 0
+                  }}>
+                    {SECTION_LABELS[section.section_type]}
+                  </h4>
+                </div>
 
                 {section.notes && (
-                  <div style={{ marginBottom: '16px' }}>
+                  <div style={{ marginBottom: '24px' }}>
                     <div style={{
-                      color: '#4a5568',
-                      fontWeight: '500',
-                      marginBottom: '8px'
+                      color: '#22b14c',
+                      fontWeight: '700',
+                      marginBottom: '12px',
+                      fontSize: '15px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
                     }}>
-                      Notes:
+                      Notes d'intervention
                     </div>
                     <div style={{
-                      color: '#718096',
-                      padding: '12px',
-                      background: '#f7fafc',
-                      borderRadius: '8px',
-                      whiteSpace: 'pre-wrap'
+                      color: '#4a5568',
+                      padding: '20px',
+                      background: 'linear-gradient(135deg, #f8fffe 0%, #f0faf7 100%)',
+                      borderRadius: '12px',
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: '1.7',
+                      fontSize: '15px',
+                      borderLeft: '4px solid #22b14c'
                     }}>
                       {section.notes}
                     </div>
@@ -665,32 +916,48 @@ export default function ClientPortal() {
                 {section.photos && section.photos.length > 0 && (
                   <div>
                     <div style={{
-                      color: '#4a5568',
-                      fontWeight: '500',
-                      marginBottom: '12px'
+                      color: '#22b14c',
+                      fontWeight: '700',
+                      marginBottom: '16px',
+                      fontSize: '15px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
-                      Photos ({section.photos.length})
+                      <span style={{ fontSize: '20px' }}>📸</span>
+                      Documentation photographique ({section.photos.length})
                     </div>
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '12px'
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                      gap: '16px'
                     }}>
                       {section.photos.map((photo) => (
                         <div
                           key={photo.id}
                           style={{
                             position: 'relative',
-                            paddingTop: '100%',
-                            borderRadius: '8px',
+                            paddingTop: '75%',
+                            borderRadius: '12px',
                             overflow: 'hidden',
                             cursor: 'pointer',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            transition: 'transform 0.2s'
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                            transition: 'all 0.3s',
+                            border: '2px solid transparent'
                           }}
                           onClick={() => window.open(photo.photo_url, '_blank')}
-                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.03)'
+                            e.currentTarget.style.boxShadow = '0 12px 32px rgba(34, 177, 76, 0.2)'
+                            e.currentTarget.style.borderColor = '#22b14c'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)'
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'
+                            e.currentTarget.style.borderColor = 'transparent'
+                          }}
                         >
                           <img
                             src={photo.photo_url}
@@ -704,6 +971,19 @@ export default function ClientPortal() {
                               objectFit: 'cover'
                             }}
                           />
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '8px',
+                            right: '8px',
+                            background: 'rgba(34, 177, 76, 0.9)',
+                            color: 'white',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            Agrandir 🔍
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -711,7 +991,14 @@ export default function ClientPortal() {
                 )}
 
                 {(!section.photos || section.photos.length === 0) && !section.notes && (
-                  <div style={{ color: '#a0aec0', fontStyle: 'italic' }}>
+                  <div style={{
+                    color: '#a0aec0',
+                    fontStyle: 'italic',
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    background: '#f7fafc',
+                    borderRadius: '10px'
+                  }}>
                     Aucune donnée pour cette section
                   </div>
                 )}
@@ -720,6 +1007,63 @@ export default function ClientPortal() {
           </div>
         )}
       </main>
+
+      <footer style={{
+        background: 'white',
+        borderTop: '1px solid rgba(34, 177, 76, 0.1)',
+        padding: '40px 40px',
+        marginTop: '80px'
+      }}>
+        <div style={{
+          maxWidth: '1400px',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '24px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <img
+              src="/logo_fin.png"
+              alt="Green Life Logo"
+              style={{
+                width: '50px',
+                height: '50px',
+                objectFit: 'contain'
+              }}
+            />
+            <div>
+              <div style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: '#1a202c',
+                marginBottom: '4px'
+              }}>
+                Green Life
+              </div>
+              <div style={{
+                fontSize: '14px',
+                color: '#718096'
+              }}>
+                Nettoyage Froid Professionnel
+              </div>
+            </div>
+          </div>
+          <div style={{
+            fontSize: '14px',
+            color: '#718096',
+            textAlign: 'right'
+          }}>
+            <div style={{ marginBottom: '4px' }}>
+              Portail Client Sécurisé
+            </div>
+            <div>
+              © {new Date().getFullYear()} Green Life. Tous droits réservés.
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
