@@ -168,28 +168,18 @@ export default function ClientList() {
     setLoading(true)
 
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-
-      console.log('Session check:', { hasSession: !!sessionData?.session, sessionError })
-
-      if (sessionError || !sessionData?.session) {
-        setDeleteError('Session expirée. Reconnectez-vous.')
-        setLoading(false)
-        return
-      }
-
       console.log('Tentative de suppression du client:', deletingClient.id)
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('clients')
         .delete()
         .eq('id', deletingClient.id)
 
-      console.log('Résultat suppression:', { data, error })
+      console.log('Résultat suppression:', { error })
 
       if (error) {
         console.error('Erreur Supabase:', error)
-        setDeleteError(`Erreur: ${error.message} (Code: ${error.code})`)
+        setDeleteError(`Erreur: ${error.message}`)
         setLoading(false)
         return
       }
