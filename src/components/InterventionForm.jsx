@@ -1137,7 +1137,6 @@ export default function InterventionForm() {
                   type="file"
                   accept="image/*"
                   multiple
-                  capture="environment"
                   onChange={(e) => handlePhotoUpload(sectionType.id, e)}
                   style={{ display: 'none' }}
                   id={`photo-${sectionType.id}`}
