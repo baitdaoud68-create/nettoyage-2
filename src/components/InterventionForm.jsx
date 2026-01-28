@@ -316,9 +316,28 @@ export default function InterventionForm() {
     })
   }
 
-  const addFooter = (doc, pageNumber) => {
+  const loadLogo = async () => {
+    try {
+      const logoUrl = '/logo_fin.png'
+      return await loadImageAsBase64(logoUrl)
+    } catch (error) {
+      console.error('Erreur chargement logo:', error)
+      return null
+    }
+  }
+
+  const addFooter = (doc, pageNumber, logoData) => {
     const pageHeight = doc.internal.pageSize.height
     const pageWidth = doc.internal.pageSize.width
+
+    if (logoData) {
+      try {
+        const logoSize = 10
+        doc.addImage(logoData, 'PNG', 15, pageHeight - 15, logoSize, logoSize)
+      } catch (error) {
+        console.error('Erreur ajout logo footer:', error)
+      }
+    }
 
     doc.setTextColor(150, 150, 150)
     doc.setFontSize(8)
@@ -329,6 +348,8 @@ export default function InterventionForm() {
   const generateGlobalPDF = async () => {
     setGeneratingGlobalPDF(true)
     try {
+      const logoData = await loadLogo()
+
       const { data: interventions } = await supabase
         .from('interventions')
         .select(`
@@ -383,7 +404,7 @@ export default function InterventionForm() {
 
       for (const interv of interventions) {
         if (yPosition > 225) {
-          addFooter(doc, pageNumber)
+          addFooter(doc, pageNumber, logoData)
           doc.addPage()
           yPosition = 20
           pageNumber++
@@ -418,7 +439,7 @@ export default function InterventionForm() {
             }
 
             if (yPosition > 230) {
-              addFooter(doc, pageNumber)
+              addFooter(doc, pageNumber, logoData)
               doc.addPage()
               yPosition = 20
               pageNumber++
@@ -462,7 +483,7 @@ export default function InterventionForm() {
 
               for (const photo of photos) {
                 if (yPosition > 205) {
-                  addFooter(doc, pageNumber)
+                  addFooter(doc, pageNumber, logoData)
                   doc.addPage()
                   yPosition = 20
                   pageNumber++
@@ -510,6 +531,8 @@ export default function InterventionForm() {
   const generateZonePDF = async (categoryId, categoryName) => {
     setGeneratingZonePDF(categoryId)
     try {
+      const logoData = await loadLogo()
+
       const { data: interventions } = await supabase
         .from('interventions')
         .select(`
@@ -569,7 +592,7 @@ export default function InterventionForm() {
 
       for (const interv of interventions) {
         if (yPosition > 230) {
-          addFooter(doc, pageNumber)
+          addFooter(doc, pageNumber, logoData)
           doc.addPage()
           yPosition = 20
           pageNumber++
@@ -598,7 +621,7 @@ export default function InterventionForm() {
             }
 
             if (yPosition > 230) {
-              addFooter(doc, pageNumber)
+              addFooter(doc, pageNumber, logoData)
               doc.addPage()
               yPosition = 20
               pageNumber++
@@ -642,7 +665,7 @@ export default function InterventionForm() {
 
               for (const photo of photos) {
                 if (yPosition > 205) {
-                  addFooter(doc, pageNumber)
+                  addFooter(doc, pageNumber, logoData)
                   doc.addPage()
                   yPosition = 20
                   pageNumber++
