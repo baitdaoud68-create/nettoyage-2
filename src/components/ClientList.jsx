@@ -26,6 +26,22 @@ export default function ClientList() {
 
   useEffect(() => {
     loadClients()
+
+    const channel = supabase
+      .channel('clients-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'clients'
+      }, (payload) => {
+        console.log('Changement détecté:', payload)
+        loadClients(true)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const loadClients = async (forceRefresh = false) => {
@@ -74,7 +90,6 @@ export default function ClientList() {
       }
 
       if (data && data[0]) {
-        await loadClients(true)
         setNewClient({ name: '', email: '', phone: '', address: '' })
         setShowAddClient(false)
         alert('Client ajouté avec succès!')
@@ -129,7 +144,6 @@ export default function ClientList() {
       }
 
       if (data && data[0]) {
-        await loadClients(true)
         setEditingClient(null)
         setEditedClient({ name: '', email: '', phone: '', address: '' })
         alert('Client modifié avec succès!')
@@ -182,14 +196,9 @@ export default function ClientList() {
 
       console.log('Suppression réussie!')
 
-      setClients([])
-
-      setTimeout(async () => {
-        await loadClients(true)
-        setDeletingClient(null)
-        setDeletePassword('')
-        setDeleteError('')
-      }, 100)
+      setDeletingClient(null)
+      setDeletePassword('')
+      setDeleteError('')
 
       alert('Client supprimé avec succès!')
 

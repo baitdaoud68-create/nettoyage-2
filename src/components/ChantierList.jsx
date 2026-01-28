@@ -26,6 +26,23 @@ export default function ChantierList() {
 
   useEffect(() => {
     loadClientAndChantiers()
+
+    const chantiersChannel = supabase
+      .channel('chantiers-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'chantiers',
+        filter: `client_id=eq.${clientId}`
+      }, (payload) => {
+        console.log('Changement chantier détecté:', payload)
+        loadClientAndChantiers()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(chantiersChannel)
+    }
   }, [clientId])
 
   const loadClientAndChantiers = async () => {
@@ -60,7 +77,6 @@ export default function ChantierList() {
       .select()
 
     if (!error && data) {
-      setChantiers([data[0], ...chantiers])
       setNewChantier({ name: '', address: '', description: '' })
       setShowAddChantier(false)
     }
@@ -88,7 +104,6 @@ export default function ChantierList() {
       .select()
 
     if (!error && data) {
-      setChantiers(chantiers.map(c => c.id === editingChantier.id ? data[0] : c))
       setEditingChantier(null)
       setEditedChantier({ name: '', address: '', description: '' })
     }
@@ -104,14 +119,10 @@ export default function ChantierList() {
 
     setLoading(true)
 
-    const { error } = await supabase
+    await supabase
       .from('chantiers')
       .delete()
       .eq('id', chantierId)
-
-    if (!error) {
-      setChantiers(chantiers.filter(c => c.id !== chantierId))
-    }
 
     setLoading(false)
   }
@@ -146,13 +157,25 @@ export default function ChantierList() {
 
     setLoading(true)
 
-    const { error } = await supabase
+    await supabase
       .from('interventions')
       .delete()
       .eq('id', interventionId)
 
-    if (!error) {
-      setInterventions(interventions.filter(i => i.id !== interventionId))
+    if (selectedChantierForInterventions) {
+      const { data: interventionsData } = await supabase
+        .from('interventions')
+        .select(`
+          *,
+          categories (name)
+        `)
+        .eq('chantier_id', selectedChantierForInterventions.id)
+        .eq('status', 'termine')
+        .order('intervention_date', { ascending: false })
+
+      if (interventionsData) {
+        setInterventions(interventionsData)
+      }
     }
 
     setLoading(false)
