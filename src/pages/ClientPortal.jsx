@@ -22,6 +22,13 @@ export default function ClientPortal() {
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [generatingPDF, setGeneratingPDF] = useState(false)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
 
   useEffect(() => {
     const storedEmail = sessionStorage.getItem('clientEmail')
@@ -35,6 +42,10 @@ export default function ClientPortal() {
   useEffect(() => {
     if (email) {
       loadClientData()
+      const mustChange = sessionStorage.getItem('mustChangePassword') === 'true'
+      if (mustChange) {
+        setShowPasswordChange(true)
+      }
     }
   }, [email])
 
@@ -105,6 +116,69 @@ export default function ClientPortal() {
     } catch (error) {
       console.error('Erreur lors du chargement des détails:', error)
     }
+  }
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    setPasswordError('')
+    setPasswordSuccess(false)
+
+    if (newPassword.length < 6) {
+      setPasswordError('Le mot de passe doit contenir au moins 6 caractères')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Les mots de passe ne correspondent pas')
+      return
+    }
+
+    setChangingPassword(true)
+
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/client-auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          action: 'change_password',
+          email,
+          password: currentPassword,
+          newPassword
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setPasswordError(data.error || 'Erreur lors du changement de mot de passe')
+        setChangingPassword(false)
+        return
+      }
+
+      setPasswordSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      sessionStorage.setItem('mustChangePassword', 'false')
+
+      setTimeout(() => {
+        setShowPasswordChange(false)
+        setPasswordSuccess(false)
+      }, 2000)
+    } catch (err) {
+      setPasswordError('Erreur de connexion. Veuillez réessayer.')
+    }
+
+    setChangingPassword(false)
+  }
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('clientEmail')
+    sessionStorage.removeItem('mustChangePassword')
+    navigate('/portail/connexion')
   }
 
   const loadImageAsBase64 = (url) => {
@@ -396,16 +470,53 @@ export default function ClientPortal() {
               </h1>
             </div>
           </div>
-          <div style={{
-            padding: '10px 20px',
-            background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <span style={{ fontSize: '20px' }}>✓</span>
-            <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>Accès vérifié</span>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button
+              onClick={() => setShowPasswordChange(true)}
+              style={{
+                padding: '10px 20px',
+                background: 'white',
+                border: '2px solid #22b14c',
+                borderRadius: '8px',
+                color: '#22b14c',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#22b14c'
+                e.target.style.color = 'white'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'white'
+                e.target.style.color = '#22b14c'
+              }}
+            >
+              Changer mot de passe
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '10px 20px',
+                background: '#f7fafc',
+                border: '2px solid #e2e8f0',
+                borderRadius: '8px',
+                color: '#4a5568',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#e2e8f0'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = '#f7fafc'
+              }}
+            >
+              Déconnexion
+            </button>
           </div>
         </div>
       </header>
@@ -1097,6 +1208,219 @@ export default function ClientPortal() {
           </div>
         </div>
       </footer>
+
+      {showPasswordChange && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }} onClick={() => !sessionStorage.getItem('mustChangePassword') && setShowPasswordChange(false)}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#1a202c',
+              marginBottom: '8px'
+            }}>
+              {sessionStorage.getItem('mustChangePassword') === 'true' ? 'Changement de mot de passe requis' : 'Changer le mot de passe'}
+            </h2>
+            {sessionStorage.getItem('mustChangePassword') === 'true' && (
+              <p style={{
+                color: '#e53e3e',
+                fontSize: '14px',
+                marginBottom: '24px',
+                background: '#fff5f5',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #feb2b2'
+              }}>
+                Pour des raisons de sécurité, vous devez changer votre mot de passe initial.
+              </p>
+            )}
+            <p style={{
+              color: '#718096',
+              fontSize: '14px',
+              marginBottom: '24px'
+            }}>
+              Veuillez créer un nouveau mot de passe sécurisé pour votre compte.
+            </p>
+
+            <form onSubmit={handlePasswordChange}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: '#4a5568',
+                  fontWeight: '500',
+                  fontSize: '14px'
+                }}>
+                  Mot de passe actuel
+                </label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#22b14c'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: '#4a5568',
+                  fontWeight: '500',
+                  fontSize: '14px'
+                }}>
+                  Nouveau mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  minLength="6"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#22b14c'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                />
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: '#4a5568',
+                  fontWeight: '500',
+                  fontSize: '14px'
+                }}>
+                  Confirmer le nouveau mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  minLength="6"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#22b14c'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                />
+              </div>
+
+              {passwordError && (
+                <div style={{
+                  padding: '12px',
+                  background: '#fff5f5',
+                  borderRadius: '8px',
+                  color: '#c53030',
+                  fontSize: '14px',
+                  marginBottom: '16px',
+                  border: '1px solid #feb2b2'
+                }}>
+                  {passwordError}
+                </div>
+              )}
+
+              {passwordSuccess && (
+                <div style={{
+                  padding: '12px',
+                  background: '#f0fff4',
+                  borderRadius: '8px',
+                  color: '#22543d',
+                  fontSize: '14px',
+                  marginBottom: '16px',
+                  border: '1px solid #9ae6b4'
+                }}>
+                  Mot de passe modifié avec succès !
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: changingPassword ? '#a0aec0' : 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+                    color: 'white',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: changingPassword ? 'not-allowed' : 'pointer',
+                    border: 'none',
+                    boxShadow: changingPassword ? 'none' : '0 4px 12px rgba(34, 177, 76, 0.3)'
+                  }}
+                >
+                  {changingPassword ? 'Modification...' : 'Modifier le mot de passe'}
+                </button>
+                {sessionStorage.getItem('mustChangePassword') !== 'true' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordChange(false)}
+                    disabled={changingPassword}
+                    style={{
+                      padding: '14px 24px',
+                      background: 'white',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: changingPassword ? 'not-allowed' : 'pointer',
+                      color: '#4a5568'
+                    }}
+                  >
+                    Annuler
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

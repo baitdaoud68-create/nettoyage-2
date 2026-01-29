@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 
 export default function ClientList() {
@@ -22,6 +22,10 @@ export default function ClientList() {
   const [deletingClient, setDeletingClient] = useState(null)
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteError, setDeleteError] = useState('')
+  const [settingPasswordClient, setSettingPasswordClient] = useState(null)
+  const [newPasswordForClient, setNewPasswordForClient] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -205,6 +209,63 @@ export default function ClientList() {
     setDeletingClient(client)
     setDeletePassword('')
     setDeleteError('')
+  }
+
+  const openSetPasswordModal = (client, e) => {
+    e.stopPropagation()
+    setSettingPasswordClient(client)
+    setNewPasswordForClient('')
+    setConfirmNewPassword('')
+    setPasswordError('')
+  }
+
+  const handleSetPassword = async (e) => {
+    e.preventDefault()
+    setPasswordError('')
+
+    if (newPasswordForClient.length < 6) {
+      setPasswordError('Le mot de passe doit contenir au moins 6 caractères')
+      return
+    }
+
+    if (newPasswordForClient !== confirmNewPassword) {
+      setPasswordError('Les mots de passe ne correspondent pas')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/client-auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          action: 'set_password',
+          clientId: settingPasswordClient.id,
+          newPassword: newPasswordForClient
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setPasswordError(data.error || 'Erreur lors de la définition du mot de passe')
+        setLoading(false)
+        return
+      }
+
+      setSettingPasswordClient(null)
+      setNewPasswordForClient('')
+      setConfirmNewPassword('')
+      alert('Mot de passe défini avec succès!')
+    } catch (err) {
+      setPasswordError('Erreur de connexion. Veuillez réessayer.')
+    }
+
+    setLoading(false)
   }
 
   return (
@@ -681,6 +742,171 @@ export default function ClientList() {
         </div>
       )}
 
+      {settingPasswordClient && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            width: '100%',
+            maxWidth: '450px'
+          }}>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '8px',
+              color: '#1a202c'
+            }}>
+              {settingPasswordClient.password_hash ? 'Modifier le mot de passe' : 'Définir un mot de passe'}
+            </h3>
+            <p style={{
+              color: '#718096',
+              marginBottom: '24px',
+              fontSize: '14px'
+            }}>
+              Client: <strong>{settingPasswordClient.name}</strong>
+              <br />
+              Email: <strong>{settingPasswordClient.email}</strong>
+            </p>
+
+            <form onSubmit={handleSetPassword}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: '#4a5568',
+                  fontWeight: '500'
+                }}>
+                  Nouveau mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={newPasswordForClient}
+                  onChange={(e) => setNewPasswordForClient(e.target.value)}
+                  placeholder="Au moins 6 caractères"
+                  autoFocus
+                  required
+                  minLength="6"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: '#4a5568',
+                  fontWeight: '500'
+                }}>
+                  Confirmer le mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="Retapez le mot de passe"
+                  required
+                  minLength="6"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+
+              {passwordError && (
+                <div style={{
+                  padding: '12px',
+                  background: '#fff5f5',
+                  borderRadius: '8px',
+                  color: '#c53030',
+                  fontSize: '14px',
+                  marginBottom: '16px',
+                  border: '1px solid #feb2b2'
+                }}>
+                  {passwordError}
+                </div>
+              )}
+
+              <div style={{
+                padding: '12px',
+                background: '#fffbeb',
+                borderRadius: '8px',
+                fontSize: '13px',
+                marginBottom: '20px',
+                lineHeight: '1.5',
+                border: '1px solid #fde68a'
+              }}>
+                <strong style={{ color: '#92400e' }}>Note:</strong>
+                <span style={{ color: '#78350f' }}> Le client devra utiliser ce mot de passe pour se connecter au portail client.</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: loading ? '#a0aec0' : 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+                    color: 'white',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {loading ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingPasswordClient(null)
+                    setNewPasswordForClient('')
+                    setConfirmNewPassword('')
+                    setPasswordError('')
+                  }}
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#e2e8f0',
+                    color: '#4a5568',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -728,14 +954,14 @@ export default function ClientList() {
                 {client.address}
               </div>
             )}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   navigate(`/technicien/client/${client.id}/chantiers`)
                 }}
                 style={{
-                  flex: 1,
+                  flex: '1 1 100%',
                   padding: '10px',
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
@@ -747,10 +973,26 @@ export default function ClientList() {
                 Chantiers
               </button>
               <button
+                onClick={(e) => openSetPasswordModal(client, e)}
+                style={{
+                  flex: '1 1 100%',
+                  padding: '10px',
+                  background: client.password_hash ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+                title={client.password_hash ? "Modifier le mot de passe" : "Définir un mot de passe"}
+              >
+                {client.password_hash ? '🔑 Modifier mot de passe' : '🔑 Définir mot de passe'}
+              </button>
+              <button
                 onClick={(e) => copyClientLink(e)}
                 style={{
-                  padding: '10px 16px',
-                  background: 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+                  flex: 1,
+                  padding: '10px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   color: 'white',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -758,12 +1000,13 @@ export default function ClientList() {
                 }}
                 title="Copier le lien du portail client"
               >
-                🔗
+                🔗 Lien
               </button>
               <button
                 onClick={(e) => handleEditClient(client, e)}
                 style={{
-                  padding: '10px 16px',
+                  flex: 1,
+                  padding: '10px',
                   background: '#e2e8f0',
                   color: '#4a5568',
                   borderRadius: '8px',
@@ -776,7 +1019,8 @@ export default function ClientList() {
               <button
                 onClick={(e) => openDeleteModal(client, e)}
                 style={{
-                  padding: '10px 16px',
+                  flex: 1,
+                  padding: '10px',
                   background: '#dc2626',
                   color: 'white',
                   borderRadius: '8px',
