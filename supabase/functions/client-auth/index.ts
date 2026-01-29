@@ -21,7 +21,7 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, email, password, newPassword } = await req.json();
+    const { action, email, password, newPassword, clientId } = await req.json();
 
     if (action === "login") {
       const { data: client, error } = await supabase
@@ -142,8 +142,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "set_password") {
-      const { clientId } = await req.json();
-
       if (!clientId || !newPassword) {
         return new Response(
           JSON.stringify({ error: "Client ID et mot de passe requis" }),
