@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import SignaturePad from './SignaturePad'
 
 export default function ClientList() {
   const [clients, setClients] = useState([])
@@ -27,11 +26,6 @@ export default function ClientList() {
   const [newPasswordForClient, setNewPasswordForClient] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
-  const [signingClient, setSigningClient] = useState(null)
-  const [signatureData, setSignatureData] = useState(null)
-  const [clientComment, setClientComment] = useState('')
-  const [savingSignature, setSavingSignature] = useState(false)
-  const [signatureSuccess, setSignatureSuccess] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -223,52 +217,6 @@ export default function ClientList() {
     setNewPasswordForClient('')
     setConfirmNewPassword('')
     setPasswordError('')
-  }
-
-  const openSignatureModal = (client, e) => {
-    e.stopPropagation()
-    setSigningClient(client)
-    setSignatureData(client.signature_data || null)
-    setClientComment(client.client_comment || '')
-    setSignatureSuccess(false)
-  }
-
-  const handleSignatureSave = (signature) => {
-    setSignatureData(signature)
-  }
-
-  const saveSignatureAndComment = async () => {
-    setSavingSignature(true)
-    setSignatureSuccess(false)
-
-    try {
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          signature_data: signatureData,
-          client_comment: clientComment,
-          signature_date: new Date().toISOString()
-        })
-        .eq('id', signingClient.id)
-
-      if (error) {
-        alert('Erreur lors de la sauvegarde')
-        setSavingSignature(false)
-        return
-      }
-
-      setSignatureSuccess(true)
-      setTimeout(() => {
-        setSigningClient(null)
-        setSignatureSuccess(false)
-        setSignatureData(null)
-        setClientComment('')
-      }, 2000)
-    } catch (err) {
-      alert('Erreur lors de la sauvegarde')
-    }
-
-    setSavingSignature(false)
   }
 
   const handleSetPassword = async (e) => {
@@ -1040,21 +988,6 @@ export default function ClientList() {
                 {client.password_hash ? '🔑 Modifier mot de passe' : '🔑 Définir mot de passe'}
               </button>
               <button
-                onClick={(e) => openSignatureModal(client, e)}
-                style={{
-                  flex: '1 1 100%',
-                  padding: '10px',
-                  background: client.signature_data ? 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                  color: 'white',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600'
-                }}
-                title={client.signature_data ? "Modifier la signature" : "Faire signer le client"}
-              >
-                {client.signature_data ? '✅ Modifier signature' : '✍️ Faire signer'}
-              </button>
-              <button
                 onClick={(e) => copyClientLink(e)}
                 style={{
                   flex: 1,
@@ -1113,154 +1046,6 @@ export default function ClientList() {
             Aucun client pour le moment
           </p>
           <p>Cliquez sur "Nouveau Client" pour commencer</p>
-        </div>
-      )}
-
-      {signingClient && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px',
-          zIndex: 1000,
-          overflowY: 'auto'
-        }} onClick={() => setSigningClient(null)}>
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '32px',
-            width: '100%',
-            maxWidth: '700px',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            margin: '20px'
-          }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: '#1a202c',
-              marginBottom: '8px'
-            }}>
-              Signature et commentaires
-            </h2>
-            <p style={{
-              color: '#718096',
-              fontSize: '14px',
-              marginBottom: '8px'
-            }}>
-              Client: <strong>{signingClient.name}</strong>
-            </p>
-            <p style={{
-              color: '#718096',
-              fontSize: '14px',
-              marginBottom: '24px'
-            }}>
-              Demandez au client de signer avec son doigt ou la souris et d'ajouter ses commentaires
-            </p>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '12px',
-                color: '#4a5568',
-                fontWeight: '600',
-                fontSize: '14px'
-              }}>
-                Signature manuscrite
-              </label>
-              <SignaturePad
-                onSave={handleSignatureSave}
-                initialSignature={signatureData}
-              />
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                color: '#4a5568',
-                fontWeight: '600',
-                fontSize: '14px'
-              }}>
-                Commentaires du client (optionnel)
-              </label>
-              <textarea
-                value={clientComment}
-                onChange={(e) => setClientComment(e.target.value)}
-                placeholder="Commentaires, remarques ou observations du client..."
-                rows="4"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  resize: 'vertical',
-                  outline: 'none',
-                  fontFamily: 'inherit'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#22b14c'}
-                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
-              />
-            </div>
-
-            {signatureSuccess && (
-              <div style={{
-                padding: '12px',
-                background: '#f0fff4',
-                borderRadius: '8px',
-                color: '#22543d',
-                fontSize: '14px',
-                marginBottom: '16px',
-                border: '1px solid #9ae6b4'
-              }}>
-                Signature et commentaires sauvegardés avec succès !
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => setSigningClient(null)}
-                disabled={savingSignature}
-                style={{
-                  padding: '12px 24px',
-                  background: 'white',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: savingSignature ? 'not-allowed' : 'pointer',
-                  color: '#4a5568'
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={saveSignatureAndComment}
-                disabled={savingSignature || !signatureData}
-                style={{
-                  padding: '12px 24px',
-                  background: (savingSignature || !signatureData) ? '#a0aec0' : 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
-                  color: 'white',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: (savingSignature || !signatureData) ? 'not-allowed' : 'pointer',
-                  border: 'none',
-                  boxShadow: (savingSignature || !signatureData) ? 'none' : '0 4px 12px rgba(34, 177, 76, 0.3)'
-                }}
-              >
-                {savingSignature ? 'Sauvegarde...' : 'Enregistrer'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
