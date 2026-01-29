@@ -1,12 +1,24 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
-import * as bcrypt from "npm:bcrypt@5.1.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
+
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const passwordHash = await hashPassword(password);
+  return passwordHash === hash;
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -52,7 +64,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const passwordMatch = await bcrypt.compare(password, client.password_hash);
+      const passwordMatch = await verifyPassword(password, client.password_hash);
 
       if (!passwordMatch) {
         return new Response(
@@ -99,7 +111,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (client.password_hash) {
-        const passwordMatch = await bcrypt.compare(password, client.password_hash);
+        const passwordMatch = await verifyPassword(password, client.password_hash);
         if (!passwordMatch) {
           return new Response(
             JSON.stringify({ error: "Mot de passe actuel incorrect" }),
@@ -111,7 +123,7 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const hashedPassword = await hashPassword(newPassword);
 
       const { error: updateError } = await supabase
         .from("clients")
@@ -152,7 +164,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const hashedPassword = await hashPassword(newPassword);
 
       const { error: updateError } = await supabase
         .from("clients")
