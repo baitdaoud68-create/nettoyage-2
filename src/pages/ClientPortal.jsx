@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { jsPDF } from 'jspdf'
+import SignaturePad from '../components/SignaturePad'
 
 const SECTION_LABELS = {
   'implantation': 'Implantation',
@@ -29,6 +30,11 @@ export default function ClientPortal() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
+  const [showSignatureModal, setShowSignatureModal] = useState(false)
+  const [signatureData, setSignatureData] = useState(null)
+  const [clientComment, setClientComment] = useState('')
+  const [savingSignature, setSavingSignature] = useState(false)
+  const [signatureSuccess, setSignatureSuccess] = useState(false)
 
   useEffect(() => {
     const storedEmail = sessionStorage.getItem('clientEmail')
@@ -63,6 +69,8 @@ export default function ClientPortal() {
         const data = await response.json()
         setClient(data.client)
         setChantiers(data.chantiers || [])
+        setSignatureData(data.client?.signature_data || null)
+        setClientComment(data.client?.client_comment || '')
       } else {
         setClient(null)
       }
@@ -173,6 +181,42 @@ export default function ClientPortal() {
     }
 
     setChangingPassword(false)
+  }
+
+  const handleSignatureSave = async (signature) => {
+    setSignatureData(signature)
+  }
+
+  const saveSignatureAndComment = async () => {
+    setSavingSignature(true)
+    setSignatureSuccess(false)
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          signature_data: signatureData,
+          client_comment: clientComment,
+          signature_date: new Date().toISOString()
+        })
+        .eq('email', email)
+
+      if (error) {
+        alert('Erreur lors de la sauvegarde')
+        setSavingSignature(false)
+        return
+      }
+
+      setSignatureSuccess(true)
+      setTimeout(() => {
+        setShowSignatureModal(false)
+        setSignatureSuccess(false)
+      }, 2000)
+    } catch (err) {
+      alert('Erreur lors de la sauvegarde')
+    }
+
+    setSavingSignature(false)
   }
 
   const handleLogout = () => {
@@ -608,6 +652,63 @@ export default function ClientPortal() {
               }}>
                 Consultez l'historique complet de vos interventions et téléchargez vos rapports
               </p>
+            </div>
+
+            <div style={{
+              background: 'white',
+              padding: '24px 32px',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+              marginBottom: '32px',
+              border: '1px solid rgba(34, 177, 76, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  color: '#1a202c',
+                  marginBottom: '4px'
+                }}>
+                  Signature et commentaires
+                </h3>
+                <p style={{
+                  fontSize: '14px',
+                  color: '#718096',
+                  margin: 0
+                }}>
+                  {signatureData ? 'Vous avez signé vos rapports' : 'Signez vos rapports d\'intervention'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSignatureModal(true)}
+                style={{
+                  padding: '12px 24px',
+                  background: signatureData ? 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: 'white',
+                  fontWeight: '600',
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(34, 177, 76, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)'
+                  e.target.style.boxShadow = '0 6px 16px rgba(34, 177, 76, 0.4)'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)'
+                  e.target.style.boxShadow = '0 4px 12px rgba(34, 177, 76, 0.3)'
+                }}
+              >
+                {signatureData ? '✅ Modifier ma signature' : '✍️ Signer mes rapports'}
+              </button>
             </div>
 
             {chantiers.length === 0 ? (
@@ -1271,6 +1372,147 @@ export default function ClientPortal() {
           </div>
         </div>
       </footer>
+
+      {showSignatureModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px',
+          overflowY: 'auto'
+        }} onClick={() => setShowSignatureModal(false)}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '100%',
+            maxWidth: '700px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            margin: '20px'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#1a202c',
+              marginBottom: '8px'
+            }}>
+              Signature et commentaires
+            </h2>
+            <p style={{
+              color: '#718096',
+              fontSize: '14px',
+              marginBottom: '24px'
+            }}>
+              Signez avec votre doigt ou souris et ajoutez vos commentaires
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '12px',
+                color: '#4a5568',
+                fontWeight: '600',
+                fontSize: '14px'
+              }}>
+                Signature manuscrite
+              </label>
+              <SignaturePad
+                onSave={handleSignatureSave}
+                initialSignature={signatureData}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                color: '#4a5568',
+                fontWeight: '600',
+                fontSize: '14px'
+              }}>
+                Vos commentaires (optionnel)
+              </label>
+              <textarea
+                value={clientComment}
+                onChange={(e) => setClientComment(e.target.value)}
+                placeholder="Ajoutez vos commentaires, remarques ou observations..."
+                rows="4"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  resize: 'vertical',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#22b14c'}
+                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+              />
+            </div>
+
+            {signatureSuccess && (
+              <div style={{
+                padding: '12px',
+                background: '#f0fff4',
+                borderRadius: '8px',
+                color: '#22543d',
+                fontSize: '14px',
+                marginBottom: '16px',
+                border: '1px solid #9ae6b4'
+              }}>
+                Signature et commentaires sauvegardés avec succès !
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowSignatureModal(false)}
+                disabled={savingSignature}
+                style={{
+                  padding: '12px 24px',
+                  background: 'white',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: savingSignature ? 'not-allowed' : 'pointer',
+                  color: '#4a5568'
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={saveSignatureAndComment}
+                disabled={savingSignature || !signatureData}
+                style={{
+                  padding: '12px 24px',
+                  background: (savingSignature || !signatureData) ? '#a0aec0' : 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: (savingSignature || !signatureData) ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  boxShadow: (savingSignature || !signatureData) ? 'none' : '0 4px 12px rgba(34, 177, 76, 0.3)'
+                }}
+              >
+                {savingSignature ? 'Sauvegarde...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showPasswordChange && (
         <div style={{
