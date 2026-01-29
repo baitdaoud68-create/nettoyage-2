@@ -15,6 +15,7 @@ export default function InterventionDetails() {
   const { interventionId } = useParams()
   const navigate = useNavigate()
   const [intervention, setIntervention] = useState(null)
+  const [chantier, setChantier] = useState(null)
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [generatingPDF, setGeneratingPDF] = useState(false)
@@ -31,13 +32,17 @@ export default function InterventionDetails() {
       .select(`
         *,
         clients (name, email),
-        categories (name)
+        categories (name),
+        chantiers (id, name, signature_data, client_comment, signature_date)
       `)
       .eq('id', interventionId)
       .single()
 
     if (interventionData) {
       setIntervention(interventionData)
+      if (interventionData.chantiers) {
+        setChantier(interventionData.chantiers)
+      }
     }
 
     const { data: sectionsData } = await supabase
@@ -267,7 +272,89 @@ export default function InterventionDetails() {
         yPosition += 8
       }
 
-      addFooter(doc, pageNumber)
+      if (chantier && (chantier.signature_data || chantier.client_comment)) {
+        if (yPosition > 200) {
+          addFooter(doc, pageNumber, logoData)
+          doc.addPage()
+          yPosition = 20
+          pageNumber++
+        }
+
+        doc.setFillColor(34, 177, 76)
+        doc.rect(15, yPosition - 3, 180, 10, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(13)
+        doc.setFont(undefined, 'bold')
+        doc.text('Signature et commentaires du client', 20, yPosition + 3)
+
+        yPosition += 15
+
+        doc.setTextColor(0, 0, 0)
+        doc.setFont(undefined, 'normal')
+
+        if (chantier.client_comment) {
+          doc.setFontSize(10)
+          doc.setTextColor(29, 53, 87)
+          doc.setFont(undefined, 'bold')
+          doc.text('Commentaires:', 20, yPosition)
+          yPosition += 6
+
+          doc.setFont(undefined, 'normal')
+          doc.setTextColor(60, 60, 60)
+          const lines = doc.splitTextToSize(chantier.client_comment, 170)
+          doc.text(lines, 20, yPosition)
+          yPosition += lines.length * 5 + 10
+        }
+
+        if (chantier.signature_data) {
+          if (yPosition > 200) {
+            addFooter(doc, pageNumber, logoData)
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
+
+          doc.setTextColor(29, 53, 87)
+          doc.setFont(undefined, 'bold')
+          doc.setFontSize(10)
+          doc.text('Signature:', 20, yPosition)
+          yPosition += 7
+
+          try {
+            const imgWidth = 80
+            const imgHeight = 40
+
+            doc.setDrawColor(34, 177, 76)
+            doc.setLineWidth(0.5)
+            doc.rect(19, yPosition - 1, imgWidth + 2, imgHeight + 2)
+
+            doc.addImage(chantier.signature_data, 'PNG', 20, yPosition, imgWidth, imgHeight)
+            yPosition += imgHeight + 5
+
+            if (chantier.signature_date) {
+              doc.setTextColor(150, 150, 150)
+              doc.setFontSize(8)
+              doc.setFont(undefined, 'italic')
+              doc.text(
+                `Signé le ${new Date(chantier.signature_date).toLocaleDateString('fr-FR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}`,
+                20,
+                yPosition
+              )
+            }
+          } catch (error) {
+            console.error('Erreur ajout signature dans PDF:', error)
+          }
+        }
+      }
+
+      addFooter(doc, pageNumber, logoData)
 
       const fileName = `Intervention_${intervention?.clients?.name}_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.pdf`
       doc.save(fileName)
@@ -506,6 +593,96 @@ export default function InterventionDetails() {
           )}
         </div>
       ))}
+
+      {chantier && (chantier.signature_data || chantier.client_comment) && (
+        <div style={{
+          background: 'white',
+          padding: '24px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          marginTop: '20px',
+          borderTop: '3px solid #22b14c'
+        }}>
+          <h3 style={{
+            fontSize: '20px',
+            fontWeight: '700',
+            color: '#1a202c',
+            marginBottom: '16px'
+          }}>
+            Signature et commentaires du client
+          </h3>
+
+          {chantier.client_comment && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                color: '#4a5568',
+                fontWeight: '600',
+                marginBottom: '8px',
+                fontSize: '14px'
+              }}>
+                Commentaires:
+              </div>
+              <div style={{
+                color: '#718096',
+                padding: '16px',
+                background: '#f7fafc',
+                borderRadius: '8px',
+                borderLeft: '4px solid #22b14c',
+                lineHeight: '1.6'
+              }}>
+                {chantier.client_comment}
+              </div>
+            </div>
+          )}
+
+          {chantier.signature_data && (
+            <div>
+              <div style={{
+                color: '#4a5568',
+                fontWeight: '600',
+                marginBottom: '12px',
+                fontSize: '14px'
+              }}>
+                Signature:
+              </div>
+              <div style={{
+                padding: '16px',
+                background: '#f7fafc',
+                borderRadius: '8px',
+                display: 'inline-block'
+              }}>
+                <img
+                  src={chantier.signature_data}
+                  alt="Signature client"
+                  style={{
+                    maxWidth: '400px',
+                    height: 'auto',
+                    display: 'block',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              {chantier.signature_date && (
+                <div style={{
+                  color: '#a0aec0',
+                  fontSize: '12px',
+                  marginTop: '8px',
+                  fontStyle: 'italic'
+                }}>
+                  Signé le {new Date(chantier.signature_date).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
