@@ -29,6 +29,8 @@ export default function InterventionForm() {
   const [generatingZonePDF, setGeneratingZonePDF] = useState(null)
   const [categoryInterventions, setCategoryInterventions] = useState({})
   const [closingAll, setClosingAll] = useState(false)
+  const [generalObservation, setGeneralObservation] = useState('')
+  const [savingObservation, setSavingObservation] = useState(false)
 
   useEffect(() => {
     loadChantierAndCategories()
@@ -43,6 +45,7 @@ export default function InterventionForm() {
 
     if (chantierData) {
       setChantier(chantierData)
+      setGeneralObservation(chantierData.general_observation || '')
     }
 
     const { data: categoriesData } = await supabase
@@ -70,6 +73,21 @@ export default function InterventionForm() {
       }
       setCategoryInterventions(interventionsByCategory)
     }
+  }
+
+  const handleSaveObservation = async () => {
+    setSavingObservation(true)
+    const { error } = await supabase
+      .from('chantiers')
+      .update({ general_observation: generalObservation })
+      .eq('id', chantierId)
+
+    if (!error) {
+      setChantier({ ...chantier, general_observation: generalObservation })
+    } else {
+      alert('Erreur lors de la sauvegarde de l\'observation')
+    }
+    setSavingObservation(false)
   }
 
   const handleAddCategory = async (e) => {
@@ -402,6 +420,40 @@ export default function InterventionForm() {
 
       yPosition += 30
 
+      if (chantier.general_observation) {
+        if (yPosition > 230) {
+          addFooter(doc, pageNumber, logoData)
+          doc.addPage()
+          yPosition = 20
+          pageNumber++
+        }
+
+        doc.setFillColor(34, 177, 76)
+        doc.rect(15, yPosition - 3, 180, 10, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.text('OBSERVATION GÉNÉRALE', 20, yPosition + 3)
+
+        yPosition += 12
+
+        doc.setFillColor(240, 249, 244)
+        const obsLines = doc.splitTextToSize(chantier.general_observation, 170)
+        const obsBlockHeight = obsLines.length * 5 + 12
+        doc.rect(15, yPosition - 3, 180, obsBlockHeight, 'F')
+        doc.setDrawColor(34, 177, 76)
+        doc.setLineWidth(0.5)
+        doc.rect(15, yPosition - 3, 180, obsBlockHeight)
+
+        doc.setTextColor(29, 53, 87)
+        doc.setFontSize(10)
+        doc.setFont(undefined, 'normal')
+        doc.text(obsLines, 20, yPosition + 3)
+
+        yPosition += obsBlockHeight + 8
+      }
+
       for (const interv of interventions) {
         if (yPosition > 225) {
           addFooter(doc, pageNumber, logoData)
@@ -589,6 +641,40 @@ export default function InterventionForm() {
       doc.text(`${new Date().toLocaleDateString('fr-FR')}`, 155, yPosition + 2)
 
       yPosition += 35
+
+      if (chantier.general_observation) {
+        if (yPosition > 230) {
+          addFooter(doc, pageNumber, logoData)
+          doc.addPage()
+          yPosition = 20
+          pageNumber++
+        }
+
+        doc.setFillColor(34, 177, 76)
+        doc.rect(15, yPosition - 3, 180, 10, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.text('OBSERVATION GÉNÉRALE', 20, yPosition + 3)
+
+        yPosition += 12
+
+        doc.setFillColor(240, 249, 244)
+        const obsLines = doc.splitTextToSize(chantier.general_observation, 170)
+        const obsBlockHeight = obsLines.length * 5 + 12
+        doc.rect(15, yPosition - 3, 180, obsBlockHeight, 'F')
+        doc.setDrawColor(34, 177, 76)
+        doc.setLineWidth(0.5)
+        doc.rect(15, yPosition - 3, 180, obsBlockHeight)
+
+        doc.setTextColor(29, 53, 87)
+        doc.setFontSize(10)
+        doc.setFont(undefined, 'normal')
+        doc.text(obsLines, 20, yPosition + 3)
+
+        yPosition += obsBlockHeight + 8
+      }
 
       for (const interv of interventions) {
         if (yPosition > 230) {
@@ -786,6 +872,53 @@ export default function InterventionForm() {
             📍 {chantier.address}
           </p>
         )}
+
+        <div style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+          <label style={{
+            display: 'block',
+            fontWeight: '600',
+            color: '#1a202c',
+            fontSize: '15px',
+            marginBottom: '8px'
+          }}>
+            Observation générale du client
+          </label>
+          <p style={{ color: '#718096', fontSize: '13px', marginBottom: '10px' }}>
+            Cette observation apparaîtra en début de tous les rapports PDF.
+          </p>
+          <textarea
+            value={generalObservation}
+            onChange={(e) => setGeneralObservation(e.target.value)}
+            rows="4"
+            placeholder="Saisissez une observation générale sur le client ou le chantier..."
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              resize: 'vertical',
+              color: '#2d3748',
+              lineHeight: '1.5'
+            }}
+          />
+          <button
+            onClick={handleSaveObservation}
+            disabled={savingObservation}
+            style={{
+              marginTop: '10px',
+              padding: '10px 24px',
+              background: savingObservation ? '#a0aec0' : 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+              color: 'white',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: savingObservation ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {savingObservation ? 'Sauvegarde...' : 'Sauvegarder l\'observation'}
+          </button>
+        </div>
       </div>
 
       {!intervention ? (

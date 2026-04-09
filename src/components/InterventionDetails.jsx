@@ -33,7 +33,7 @@ export default function InterventionDetails() {
         *,
         clients (name, email),
         categories (name),
-        chantiers (id, name, signature_data, client_comment, signature_date)
+        chantiers (id, name, signature_data, client_comment, signature_date, general_observation)
       `)
       .eq('id', interventionId)
       .single()
@@ -192,6 +192,40 @@ export default function InterventionDetails() {
       doc.text(`${new Date(intervention?.intervention_date).toLocaleDateString('fr-FR')}`, 50, yPosition + 16)
 
       yPosition += 35
+
+      if (chantier?.general_observation) {
+        if (yPosition > 230) {
+          addFooter(doc, pageNumber, logoData)
+          doc.addPage()
+          yPosition = 20
+          pageNumber++
+        }
+
+        doc.setFillColor(34, 177, 76)
+        doc.rect(15, yPosition - 3, 180, 10, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.text('OBSERVATION GÉNÉRALE', 20, yPosition + 3)
+
+        yPosition += 12
+
+        doc.setFillColor(240, 249, 244)
+        const obsLines = doc.splitTextToSize(chantier.general_observation, 170)
+        const obsBlockHeight = obsLines.length * 5 + 12
+        doc.rect(15, yPosition - 3, 180, obsBlockHeight, 'F')
+        doc.setDrawColor(34, 177, 76)
+        doc.setLineWidth(0.5)
+        doc.rect(15, yPosition - 3, 180, obsBlockHeight)
+
+        doc.setTextColor(29, 53, 87)
+        doc.setFontSize(10)
+        doc.setFont(undefined, 'normal')
+        doc.text(obsLines, 20, yPosition + 3)
+
+        yPosition += obsBlockHeight + 8
+      }
 
       const sectionsWithContent = sections.filter(section =>
         section.notes || (section.photos && section.photos.length > 0)
