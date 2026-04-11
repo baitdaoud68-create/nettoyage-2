@@ -404,7 +404,7 @@ export default function InterventionForm() {
       yPosition = 45
 
       doc.setFillColor(29, 53, 87)
-      doc.rect(15, yPosition - 5, 180, 28, 'F')
+      doc.rect(15, yPosition - 5, 180, 35, 'F')
 
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(11)
@@ -412,13 +412,15 @@ export default function InterventionForm() {
       doc.text('CHANTIER:', 20, yPosition + 2)
       doc.text('CLIENT:', 20, yPosition + 9)
       doc.text('DATE:', 20, yPosition + 16)
+      doc.text('NB. ÉQUIPEMENTS:', 20, yPosition + 23)
 
       doc.setFont(undefined, 'normal')
-      doc.text(`${chantier.name}`, 55, yPosition + 2)
-      doc.text(`${chantier.clients?.name || 'N/A'}`, 55, yPosition + 9)
-      doc.text(`${new Date().toLocaleDateString('fr-FR')}`, 55, yPosition + 16)
+      doc.text(`${chantier.name}`, 65, yPosition + 2)
+      doc.text(`${chantier.clients?.name || 'N/A'}`, 65, yPosition + 9)
+      doc.text(`${new Date().toLocaleDateString('fr-FR')}`, 65, yPosition + 16)
+      doc.text(`${categories.length}`, 65, yPosition + 23)
 
-      yPosition += 30
+      yPosition += 37
 
       if (chantier.general_observation) {
         if (yPosition > 230) {
@@ -621,7 +623,7 @@ export default function InterventionForm() {
       yPosition = 45
 
       doc.setFillColor(29, 53, 87)
-      doc.rect(15, yPosition - 5, 180, 28, 'F')
+      doc.rect(15, yPosition - 5, 180, 35, 'F')
 
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(11)
@@ -629,18 +631,20 @@ export default function InterventionForm() {
       doc.text('CHANTIER:', 20, yPosition + 2)
       doc.text('CLIENT:', 20, yPosition + 9)
       doc.text('ZONE:', 20, yPosition + 16)
+      doc.text('NB. ÉQUIPEMENTS:', 20, yPosition + 23)
 
       doc.setFont(undefined, 'normal')
-      doc.text(`${chantier.name}`, 55, yPosition + 2)
-      doc.text(`${chantier.clients?.name || 'N/A'}`, 55, yPosition + 9)
-      doc.text(`${categoryName}`, 55, yPosition + 16)
+      doc.text(`${chantier.name}`, 65, yPosition + 2)
+      doc.text(`${chantier.clients?.name || 'N/A'}`, 65, yPosition + 9)
+      doc.text(`${categoryName}`, 65, yPosition + 16)
+      doc.text(`${categories.length}`, 65, yPosition + 23)
 
       doc.setFont(undefined, 'bold')
       doc.text('DATE:', 130, yPosition + 2)
       doc.setFont(undefined, 'normal')
       doc.text(`${new Date().toLocaleDateString('fr-FR')}`, 155, yPosition + 2)
 
-      yPosition += 35
+      yPosition += 37
 
       if (chantier.general_observation) {
         if (yPosition > 230) {

@@ -21,6 +21,7 @@ export default function InterventionDetails() {
   const [generatingPDF, setGeneratingPDF] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [equipmentCount, setEquipmentCount] = useState(0)
 
   useEffect(() => {
     loadInterventionDetails()
@@ -42,6 +43,13 @@ export default function InterventionDetails() {
       setIntervention(interventionData)
       if (interventionData.chantiers) {
         setChantier(interventionData.chantiers)
+
+        const { count } = await supabase
+          .from('categories')
+          .select('id', { count: 'exact', head: true })
+          .eq('chantier_id', interventionData.chantiers.id)
+
+        setEquipmentCount(count || 0)
       }
     }
 
@@ -177,7 +185,7 @@ export default function InterventionDetails() {
       yPosition = 45
 
       doc.setFillColor(29, 53, 87)
-      doc.rect(15, yPosition - 5, 180, 28, 'F')
+      doc.rect(15, yPosition - 5, 180, 35, 'F')
 
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(11)
@@ -185,13 +193,15 @@ export default function InterventionDetails() {
       doc.text('CLIENT:', 20, yPosition + 2)
       doc.text('ZONE:', 20, yPosition + 9)
       doc.text('DATE:', 20, yPosition + 16)
+      doc.text('NB. ÉQUIPEMENTS:', 20, yPosition + 23)
 
       doc.setFont(undefined, 'normal')
-      doc.text(`${intervention?.clients?.name || 'N/A'}`, 50, yPosition + 2)
-      doc.text(`${intervention?.categories?.name || 'N/A'}`, 50, yPosition + 9)
-      doc.text(`${new Date(intervention?.intervention_date).toLocaleDateString('fr-FR')}`, 50, yPosition + 16)
+      doc.text(`${intervention?.clients?.name || 'N/A'}`, 65, yPosition + 2)
+      doc.text(`${intervention?.categories?.name || 'N/A'}`, 65, yPosition + 9)
+      doc.text(`${new Date(intervention?.intervention_date).toLocaleDateString('fr-FR')}`, 65, yPosition + 16)
+      doc.text(`${equipmentCount}`, 65, yPosition + 23)
 
-      yPosition += 35
+      yPosition += 37
 
       if (chantier?.general_observation) {
         if (yPosition > 230) {
