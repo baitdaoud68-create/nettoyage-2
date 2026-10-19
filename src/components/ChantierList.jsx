@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import SignaturePad from './SignaturePad'
+import jsPDF from 'jspdf'
 
 export default function ChantierList() {
   const { clientId } = useParams()
@@ -24,11 +25,14 @@ export default function ChantierList() {
   const [showInterventions, setShowInterventions] = useState(false)
   const [selectedChantierForInterventions, setSelectedChantierForInterventions] = useState(null)
   const [interventions, setInterventions] = useState([])
+  const [allChantierPhotos, setAllChantierPhotos] = useState([])
+  const [loadingPhotos, setLoadingPhotos] = useState(false)
   const [signingChantier, setSigningChantier] = useState(null)
   const [signatureData, setSignatureData] = useState(null)
   const [chantierComment, setChantierComment] = useState('')
   const [savingSignature, setSavingSignature] = useState(false)
   const [signatureSuccess, setSignatureSuccess] = useState(false)
+  const [generatingPhotoPDF, setGeneratingPhotoPDF] = useState(false)
 
   useEffect(() => {
     loadClientAndChantiers()
@@ -151,6 +155,40 @@ export default function ChantierList() {
       setInterventions(interventionsData)
     }
 
+    if (chantier.name?.toUpperCase().includes('HELFER')) {
+      setLoadingPhotos(true)
+      try {
+        const allPhotos = []
+        for (const interv of interventionsData || []) {
+          const { data: sections } = await supabase
+            .from('intervention_sections')
+            .select('id, section_type, notes')
+            .eq('intervention_id', interv.id)
+          for (const section of sections || []) {
+            const { data: photos } = await supabase
+              .from('section_photos')
+              .select('id, photo_url, section_id')
+              .eq('section_id', section.id)
+            if (photos) {
+              allPhotos.push(...photos.map(p => ({
+                ...p,
+                section_type: section.section_type,
+                section_notes: section.notes,
+                intervention_date: interv.intervention_date,
+                category_name: interv.categories?.name
+              })))
+            }
+          }
+        }
+        setAllChantierPhotos(allPhotos)
+      } catch (err) {
+        console.error('Erreur chargement photos:', err)
+      }
+      setLoadingPhotos(false)
+    } else {
+      setAllChantierPhotos([])
+    }
+
     setShowInterventions(true)
   }
 
@@ -233,6 +271,163 @@ export default function ChantierList() {
     setSavingSignature(false)
   }
 
+  const loadImageAsBase64 = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0)
+        try {
+          resolve(canvas.toDataURL('image/jpeg', 0.85))
+        } catch (err) {
+          reject(err)
+        }
+      }
+      img.onerror = reject
+      img.src = url
+    })
+  }
+
+  const loadLogo = async () => {
+    try {
+      return await loadImageAsBase64('/logo_fin.png')
+    } catch (error) {
+      console.error('Erreur chargement logo:', error)
+      return null
+    }
+  }
+
+  const generatePhotosPDF = async () => {
+    setGeneratingPhotoPDF(true)
+    try {
+      const logoData = await loadLogo()
+      const doc = new jsPDF()
+      let yPosition = 15
+      let pageNumber = 1
+
+      doc.setFillColor(34, 177, 76)
+      doc.rect(0, 0, 210, 35, 'F')
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(22)
+      doc.setFont(undefined, 'bold')
+      doc.text('RAPPORT PHOTOGRAPHIQUE', 105, 15, { align: 'center' })
+
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'normal')
+      doc.text('Green Life - Nettoyage Froid', 105, 25, { align: 'center' })
+
+      yPosition = 45
+
+      doc.setFillColor(29, 53, 87)
+      doc.rect(15, yPosition - 5, 180, 20, 'F')
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.text('CHANTIER:', 20, yPosition + 2)
+      doc.text('CLIENT:', 20, yPosition + 9)
+
+      doc.setFont(undefined, 'normal')
+      doc.text(`${selectedChantierForInterventions?.name || 'N/A'}`, 55, yPosition + 2)
+      doc.text(`${client?.name || 'N/A'}`, 55, yPosition + 9)
+
+      yPosition += 28
+
+      if (selectedChantierForInterventions?.general_observation) {
+        doc.setFillColor(34, 177, 76)
+        doc.rect(20, yPosition - 2, 170, 8, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(11)
+        doc.setFont(undefined, 'bold')
+        doc.text('OBSERVATION GENERALE', 25, yPosition + 3)
+
+        yPosition += 10
+
+        doc.setFontSize(10)
+        doc.setTextColor(60, 60, 60)
+        doc.setFont(undefined, 'normal')
+        const obsLines = doc.splitTextToSize(selectedChantierForInterventions.general_observation, 170)
+        doc.text(obsLines, 20, yPosition)
+        yPosition += obsLines.length * 5 + 10
+      }
+
+      if (allChantierPhotos.length > 0) {
+        doc.setFillColor(34, 177, 76)
+        doc.rect(20, yPosition - 2, 170, 8, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(11)
+        doc.setFont(undefined, 'bold')
+        doc.text(`PHOTOS (${allChantierPhotos.length})`, 25, yPosition + 3)
+
+        yPosition += 12
+
+        for (const photo of allChantierPhotos) {
+          if (yPosition > 210) {
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
+
+          try {
+            const imgData = await loadImageAsBase64(photo.photo_url)
+            const imgWidth = 85
+            const imgHeight = 64
+
+            doc.setDrawColor(34, 177, 76)
+            doc.setLineWidth(0.5)
+            doc.rect(62, yPosition - 1, imgWidth + 2, imgHeight + 2)
+
+            doc.addImage(imgData, 'JPEG', 63, yPosition, imgWidth, imgHeight)
+            yPosition += imgHeight + 10
+          } catch (error) {
+            console.error('Erreur chargement image:', error)
+            doc.setTextColor(180, 180, 180)
+            doc.text('Image non disponible', 25, yPosition)
+            yPosition += 10
+          }
+        }
+      } else {
+        doc.setTextColor(120, 120, 120)
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'italic')
+        doc.text('Aucune photo disponible.', 105, yPosition + 10, { align: 'center' })
+      }
+
+      const totalPages = pageNumber
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i)
+        if (logoData) {
+          try {
+            const pageWidth = doc.internal.pageSize.width
+            const pageHeight = doc.internal.pageSize.height
+            doc.addImage(logoData, 'PNG', 15, pageHeight - 15, 10, 10)
+            doc.setTextColor(150, 150, 150)
+            doc.setFontSize(8)
+            doc.text('Green Life - Nettoyage Froid', pageWidth / 2, pageHeight - 10, { align: 'center' })
+            doc.text(`Page ${i}/${totalPages}`, pageWidth - 20, pageHeight - 10, { align: 'right' })
+          } catch (error) {
+            console.error('Erreur ajout footer:', error)
+          }
+        }
+      }
+
+      const fileName = `Photos_${client?.name || 'client'}_${selectedChantierForInterventions?.name || 'chantier'}.pdf`
+      doc.save(fileName)
+    } catch (error) {
+      console.error('Erreur génération PDF photos:', error)
+      alert('Erreur lors de la génération du PDF')
+    } finally {
+      setGeneratingPhotoPDF(false)
+    }
+  }
+
   if (!client) return <div>Chargement...</div>
 
   if (showInterventions) {
@@ -271,6 +466,103 @@ export default function ChantierList() {
             Chantier: {selectedChantierForInterventions?.name}
           </p>
         </div>
+
+        {selectedChantierForInterventions?.name?.toUpperCase().includes('HELFER') && (
+          <div style={{
+            background: 'white',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            marginBottom: '24px',
+            borderTop: '4px solid #22b14c'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <span style={{ fontSize: '28px' }}>📸</span>
+              <h3 style={{
+                fontSize: '22px',
+                fontWeight: '700',
+                color: '#1a202c',
+                margin: 0
+              }}>
+                HELFER COK
+              </h3>
+              <button
+                onClick={generatePhotosPDF}
+                disabled={generatingPhotoPDF || loadingPhotos || allChantierPhotos.length === 0}
+                style={{
+                  marginLeft: 'auto',
+                  padding: '10px 18px',
+                  background: (generatingPhotoPDF || allChantierPhotos.length === 0) ? '#a0aec0' : 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: (generatingPhotoPDF || allChantierPhotos.length === 0) ? 'not-allowed' : 'pointer',
+                  boxShadow: allChantierPhotos.length === 0 ? 'none' : '0 4px 12px rgba(34, 177, 76, 0.3)'
+                }}
+              >
+                {generatingPhotoPDF ? 'Génération...' : '📄 Générer PDF photos'}
+              </button>
+            </div>
+            {loadingPhotos ? (
+              <div style={{ color: '#718096', padding: '20px', textAlign: 'center' }}>
+                Chargement des photos...
+              </div>
+            ) : allChantierPhotos.length > 0 ? (
+              <>
+                <div style={{
+                  color: '#4a5568',
+                  fontWeight: '500',
+                  marginBottom: '12px'
+                }}>
+                  Toutes les photos ({allChantierPhotos.length})
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: '12px'
+                }}>
+                  {allChantierPhotos.map((photo) => (
+                    <div
+                      key={photo.id}
+                      style={{
+                        position: 'relative',
+                        paddingTop: '100%',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => window.open(photo.photo_url, '_blank')}
+                    >
+                      <img
+                        src={photo.photo_url}
+                        alt="Photo intervention"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{ color: '#a0aec0', fontStyle: 'italic' }}>
+                Aucune photo disponible
+              </div>
+            )}
+          </div>
+        )}
 
         {interventions.length === 0 ? (
           <div style={{

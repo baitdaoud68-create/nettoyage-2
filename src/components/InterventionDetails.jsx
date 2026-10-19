@@ -237,53 +237,72 @@ export default function InterventionDetails() {
         yPosition += obsBlockHeight + 8
       }
 
-      const sectionsWithContent = sections.filter(section =>
-        section.notes || (section.photos && section.photos.length > 0)
-      )
+      const isHelfer = chantier?.name?.toUpperCase().includes('HELFER')
 
-      for (const section of sectionsWithContent) {
-        if (yPosition > 230) {
-          addFooter(doc, pageNumber, logoData)
-          doc.addPage()
-          yPosition = 20
-          pageNumber++
+      if (isHelfer) {
+        const allPhotos = sections.flatMap(s => s.photos || [])
+        const sectionsWithNotes = sections.filter(s => s.notes)
+
+        for (const section of sectionsWithNotes) {
+          if (yPosition > 230) {
+            addFooter(doc, pageNumber, logoData)
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
+
+          doc.setFillColor(0, 144, 231)
+          doc.rect(15, yPosition - 3, 180, 10, 'F')
+
+          doc.setTextColor(255, 255, 255)
+          doc.setFontSize(13)
+          doc.setFont(undefined, 'bold')
+          doc.text(SECTION_LABELS[section.section_type], 20, yPosition + 3)
+
+          yPosition += 12
+
+          if (section.notes) {
+            doc.setFontSize(10)
+            doc.setTextColor(29, 53, 87)
+            doc.setFont(undefined, 'bold')
+            doc.text('Notes:', 20, yPosition)
+            yPosition += 6
+
+            doc.setFont(undefined, 'normal')
+            doc.setTextColor(60, 60, 60)
+            const lines = doc.splitTextToSize(section.notes, 170)
+            doc.text(lines, 20, yPosition)
+            yPosition += lines.length * 5 + 8
+          }
+
+          yPosition += 8
         }
 
-        doc.setFillColor(0, 144, 231)
-        doc.rect(15, yPosition - 3, 180, 10, 'F')
+        if (allPhotos.length > 0) {
+          if (yPosition > 230) {
+            addFooter(doc, pageNumber, logoData)
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
 
-        doc.setTextColor(255, 255, 255)
-        doc.setFontSize(13)
-        doc.setFont(undefined, 'bold')
-        doc.text(SECTION_LABELS[section.section_type], 20, yPosition + 3)
+          doc.setFillColor(34, 177, 76)
+          doc.rect(15, yPosition - 3, 180, 10, 'F')
 
-        yPosition += 12
-
-        doc.setTextColor(0, 0, 0)
-        doc.setFont(undefined, 'normal')
-
-        if (section.notes) {
-          doc.setFontSize(10)
-          doc.setTextColor(29, 53, 87)
+          doc.setTextColor(255, 255, 255)
+          doc.setFontSize(13)
           doc.setFont(undefined, 'bold')
-          doc.text('Notes:', 20, yPosition)
-          yPosition += 6
+          doc.text('HELFER COK', 20, yPosition + 3)
 
-          doc.setFont(undefined, 'normal')
-          doc.setTextColor(60, 60, 60)
-          const lines = doc.splitTextToSize(section.notes, 170)
-          doc.text(lines, 20, yPosition)
-          yPosition += lines.length * 5 + 8
-        }
+          yPosition += 12
 
-        if (section.photos && section.photos.length > 0) {
           doc.setTextColor(29, 53, 87)
           doc.setFont(undefined, 'bold')
           doc.setFontSize(10)
-          doc.text(`Photos (${section.photos.length}):`, 20, yPosition)
+          doc.text(`Photos (${allPhotos.length}):`, 20, yPosition)
           yPosition += 7
 
-          for (const photo of section.photos) {
+          for (const photo of allPhotos) {
             if (yPosition > 205) {
               addFooter(doc, pageNumber, logoData)
               doc.addPage()
@@ -312,8 +331,85 @@ export default function InterventionDetails() {
             }
           }
         }
+      } else {
+        const sectionsWithContent = sections.filter(section =>
+          section.notes || (section.photos && section.photos.length > 0)
+        )
 
-        yPosition += 8
+        for (const section of sectionsWithContent) {
+          if (yPosition > 230) {
+            addFooter(doc, pageNumber, logoData)
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
+
+          doc.setFillColor(0, 144, 231)
+          doc.rect(15, yPosition - 3, 180, 10, 'F')
+
+          doc.setTextColor(255, 255, 255)
+          doc.setFontSize(13)
+          doc.setFont(undefined, 'bold')
+          doc.text(SECTION_LABELS[section.section_type], 20, yPosition + 3)
+
+          yPosition += 12
+
+          doc.setTextColor(0, 0, 0)
+          doc.setFont(undefined, 'normal')
+
+          if (section.notes) {
+            doc.setFontSize(10)
+            doc.setTextColor(29, 53, 87)
+            doc.setFont(undefined, 'bold')
+            doc.text('Notes:', 20, yPosition)
+            yPosition += 6
+
+            doc.setFont(undefined, 'normal')
+            doc.setTextColor(60, 60, 60)
+            const lines = doc.splitTextToSize(section.notes, 170)
+            doc.text(lines, 20, yPosition)
+            yPosition += lines.length * 5 + 8
+          }
+
+          if (section.photos && section.photos.length > 0) {
+            doc.setTextColor(29, 53, 87)
+            doc.setFont(undefined, 'bold')
+            doc.setFontSize(10)
+            doc.text(`Photos (${section.photos.length}):`, 20, yPosition)
+            yPosition += 7
+
+            for (const photo of section.photos) {
+              if (yPosition > 205) {
+                addFooter(doc, pageNumber, logoData)
+                doc.addPage()
+                yPosition = 20
+                pageNumber++
+              }
+
+              try {
+                const imgData = await loadImageAsBase64(photo.photo_url)
+                const imgWidth = 85
+                const imgHeight = 64
+
+                doc.setDrawColor(34, 177, 76)
+                doc.setLineWidth(0.5)
+                doc.rect(19, yPosition - 1, imgWidth + 2, imgHeight + 2)
+
+                const format = photo.photo_url.toLowerCase().includes('.png') ? 'PNG' : 'JPEG'
+                doc.addImage(imgData, format, 20, yPosition, imgWidth, imgHeight)
+                yPosition += imgHeight + 8
+              } catch (error) {
+                console.error('Erreur chargement image:', error, photo.photo_url)
+                doc.setTextColor(180, 180, 180)
+                doc.setFontSize(9)
+                doc.text('Image non disponible', 20, yPosition)
+                yPosition += 10
+              }
+            }
+          }
+
+          yPosition += 8
+        }
       }
 
       if (chantier && (chantier.signature_data || chantier.client_comment)) {
@@ -546,7 +642,109 @@ export default function InterventionDetails() {
         )}
       </div>
 
-      {sections.map((section) => (
+      {chantier?.name?.toUpperCase().includes('HELFER') ? (
+        (() => {
+          const allPhotos = sections.flatMap(s => s.photos || [])
+          const sectionsWithNotes = sections.filter(s => s.notes)
+          return (
+            <>
+              {sectionsWithNotes.map((section) => (
+                <div
+                  key={section.id}
+                  style={{
+                    background: 'white',
+                    padding: '24px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    marginBottom: '20px'
+                  }}
+                >
+                  <h4 style={{
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    marginBottom: '16px',
+                    color: '#1a202c'
+                  }}>
+                    {SECTION_LABELS[section.section_type]}
+                  </h4>
+                  <div style={{
+                    color: '#718096',
+                    padding: '12px',
+                    background: '#f7fafc',
+                    borderRadius: '8px'
+                  }}>
+                    {section.notes}
+                  </div>
+                </div>
+              ))}
+
+              <div style={{
+                background: 'white',
+                padding: '24px',
+                borderRadius: '12px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                marginBottom: '20px'
+              }}>
+                <h4 style={{
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  marginBottom: '16px',
+                  color: '#1a202c'
+                }}>
+                  HELFER COK
+                </h4>
+                {allPhotos.length > 0 ? (
+                  <>
+                    <div style={{
+                      color: '#4a5568',
+                      fontWeight: '500',
+                      marginBottom: '12px'
+                    }}>
+                      Photos ({allPhotos.length})
+                    </div>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '12px'
+                    }}>
+                      {allPhotos.map((photo) => (
+                        <div
+                          key={photo.id}
+                          style={{
+                            position: 'relative',
+                            paddingTop: '100%',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => window.open(photo.photo_url, '_blank')}
+                        >
+                          <img
+                            src={photo.photo_url}
+                            alt="Photo intervention"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: '#a0aec0', fontStyle: 'italic' }}>
+                    Aucune photo
+                  </div>
+                )}
+              </div>
+            </>
+          )
+        })()
+      ) : sections.map((section) => (
         <div
           key={section.id}
           style={{

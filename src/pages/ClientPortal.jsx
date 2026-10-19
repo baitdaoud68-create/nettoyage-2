@@ -19,6 +19,9 @@ export default function ClientPortal() {
   const [selectedChantier, setSelectedChantier] = useState(null)
   const [interventions, setInterventions] = useState([])
   const [selectedIntervention, setSelectedIntervention] = useState(null)
+  const [allChantierPhotos, setAllChantierPhotos] = useState([])
+  const [loadingPhotos, setLoadingPhotos] = useState(false)
+  const [generatingPhotoPDF, setGeneratingPhotoPDF] = useState(false)
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [generatingPDF, setGeneratingPDF] = useState(false)
@@ -90,6 +93,37 @@ export default function ClientPortal() {
       if (response.ok) {
         const data = await response.json()
         setInterventions(data.interventions || [])
+
+        if (chantier?.name?.toUpperCase().includes('HELFER')) {
+          setLoadingPhotos(true)
+          setAllChantierPhotos([])
+          try {
+            const photosByIntervention = await Promise.all(
+              (data.interventions || []).map(async (interv) => {
+                const detailUrl = `${supabaseUrl}/functions/v1/client-portal-api?email=${encodeURIComponent(email)}&action=get_intervention_details&intervention_id=${interv.id}`
+                const detailResp = await fetch(detailUrl, {
+                  headers: { 'Authorization': `Bearer ${supabaseAnonKey}` }
+                })
+                if (detailResp.ok) {
+                  const detailData = await detailResp.json()
+                  return (detailData.sections || []).flatMap(s => (s.photos || []).map(p => ({
+                    ...p,
+                    section_type: s.section_type,
+                    intervention_date: interv.intervention_date,
+                    category_name: interv.categories?.name
+                  })))
+                }
+                return []
+              })
+            )
+            setAllChantierPhotos(photosByIntervention.flat())
+          } catch (err) {
+            console.error('Erreur chargement photos:', err)
+          }
+          setLoadingPhotos(false)
+        } else {
+          setAllChantierPhotos([])
+        }
       }
     } catch (error) {
       console.error('Erreur lors du chargement des interventions:', error)
@@ -227,6 +261,122 @@ export default function ClientPortal() {
     doc.text(`Page ${pageNumber}/${totalPages}`, pageWidth - 20, pageHeight - 10, { align: 'right' })
   }
 
+  const generatePhotosPDF = async () => {
+    setGeneratingPhotoPDF(true)
+    try {
+      const logoData = await loadLogo()
+
+      const doc = new jsPDF()
+      let yPosition = 15
+      let pageNumber = 1
+
+      doc.setFillColor(34, 177, 76)
+      doc.rect(0, 0, 210, 35, 'F')
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(22)
+      doc.setFont(undefined, 'bold')
+      doc.text('RAPPORT PHOTOGRAPHIQUE', 105, 15, { align: 'center' })
+
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'normal')
+      doc.text('Green Life - Nettoyage Froid', 105, 25, { align: 'center' })
+
+      yPosition = 45
+
+      doc.setFillColor(29, 53, 87)
+      doc.rect(15, yPosition - 5, 180, 20, 'F')
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.text('CHANTIER:', 20, yPosition + 2)
+      doc.text('CLIENT:', 20, yPosition + 9)
+
+      doc.setFont(undefined, 'normal')
+      doc.text(`${selectedChantier?.name || 'N/A'}`, 55, yPosition + 2)
+      doc.text(`${client.name}`, 55, yPosition + 9)
+
+      yPosition += 28
+
+      if (selectedChantier?.general_observation) {
+        doc.setFillColor(34, 177, 76)
+        doc.rect(20, yPosition - 2, 170, 8, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(11)
+        doc.setFont(undefined, 'bold')
+        doc.text('OBSERVATION GENERALE', 25, yPosition + 3)
+
+        yPosition += 10
+
+        doc.setFontSize(10)
+        doc.setTextColor(60, 60, 60)
+        doc.setFont(undefined, 'normal')
+        const obsLines = doc.splitTextToSize(selectedChantier.general_observation, 170)
+        doc.text(obsLines, 20, yPosition)
+        yPosition += obsLines.length * 5 + 10
+      }
+
+      if (allChantierPhotos.length > 0) {
+        doc.setFillColor(34, 177, 76)
+        doc.rect(20, yPosition - 2, 170, 8, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(11)
+        doc.setFont(undefined, 'bold')
+        doc.text(`PHOTOS (${allChantierPhotos.length})`, 25, yPosition + 3)
+
+        yPosition += 12
+
+        for (const photo of allChantierPhotos) {
+          if (yPosition > 210) {
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
+
+          try {
+            const imgData = await loadImageAsBase64(photo.photo_url)
+            const imgWidth = 85
+            const imgHeight = 64
+
+            doc.setDrawColor(34, 177, 76)
+            doc.setLineWidth(0.5)
+            doc.rect(62, yPosition - 1, imgWidth + 2, imgHeight + 2)
+
+            doc.addImage(imgData, 'JPEG', 63, yPosition, imgWidth, imgHeight)
+            yPosition += imgHeight + 10
+          } catch (error) {
+            console.error('Erreur chargement image:', error)
+            doc.setTextColor(180, 180, 180)
+            doc.text('Image non disponible', 25, yPosition)
+            yPosition += 10
+          }
+        }
+      } else {
+        doc.setTextColor(120, 120, 120)
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'italic')
+        doc.text('Aucune photo disponible.', 105, yPosition + 10, { align: 'center' })
+      }
+
+      const totalPages = pageNumber
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i)
+        addFooter(doc, i, logoData, totalPages)
+      }
+
+      const fileName = `Photos_${client.name}_${selectedChantier?.name || 'chantier'}.pdf`
+      doc.save(fileName)
+    } catch (error) {
+      console.error('Erreur génération PDF photos:', error)
+      alert('Erreur lors de la génération du PDF')
+    } finally {
+      setGeneratingPhotoPDF(false)
+    }
+  }
+
   const generatePDF = async () => {
     setGeneratingPDF(true)
     try {
@@ -267,31 +417,31 @@ export default function ClientPortal() {
 
       yPosition += 35
 
-      for (const section of sections) {
-        if (!section.notes && (!section.photos || section.photos.length === 0)) {
-          continue
-        }
+      const isHelfer = selectedChantier?.name?.toUpperCase().includes('HELFER')
 
-        if (yPosition > 230) {
-          doc.addPage()
-          yPosition = 20
-          pageNumber++
-        }
+      if (isHelfer) {
+        const allPhotos = sections.flatMap(s => s.photos || [])
+        const sectionsWithNotes = sections.filter(s => s.notes)
 
-        doc.setFillColor(34, 177, 76)
-        doc.rect(20, yPosition - 2, 170, 8, 'F')
+        for (const section of sectionsWithNotes) {
+          if (!section.notes) continue
 
-        doc.setTextColor(255, 255, 255)
-        doc.setFontSize(11)
-        doc.setFont(undefined, 'bold')
-        doc.text(SECTION_LABELS[section.section_type], 25, yPosition + 3)
+          if (yPosition > 230) {
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
 
-        yPosition += 10
+          doc.setFillColor(34, 177, 76)
+          doc.rect(20, yPosition - 2, 170, 8, 'F')
 
-        doc.setTextColor(0, 0, 0)
-        doc.setFont(undefined, 'normal')
+          doc.setTextColor(255, 255, 255)
+          doc.setFontSize(11)
+          doc.setFont(undefined, 'bold')
+          doc.text(SECTION_LABELS[section.section_type], 25, yPosition + 3)
 
-        if (section.notes) {
+          yPosition += 10
+
           doc.setFontSize(9)
           doc.setTextColor(29, 53, 87)
           doc.setFont(undefined, 'bold')
@@ -303,16 +453,34 @@ export default function ClientPortal() {
           const lines = doc.splitTextToSize(section.notes, 160)
           doc.text(lines, 25, yPosition)
           yPosition += lines.length * 4 + 6
+
+          yPosition += 6
         }
 
-        if (section.photos && section.photos.length > 0) {
+        if (allPhotos.length > 0) {
+          if (yPosition > 230) {
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
+
+          doc.setFillColor(34, 177, 76)
+          doc.rect(20, yPosition - 2, 170, 8, 'F')
+
+          doc.setTextColor(255, 255, 255)
+          doc.setFontSize(11)
+          doc.setFont(undefined, 'bold')
+          doc.text('HELFER COK', 25, yPosition + 3)
+
+          yPosition += 10
+
           doc.setTextColor(29, 53, 87)
           doc.setFont(undefined, 'bold')
           doc.setFontSize(9)
-          doc.text(`Photos (${section.photos.length}):`, 25, yPosition)
+          doc.text(`Photos (${allPhotos.length}):`, 25, yPosition)
           yPosition += 6
 
-          for (const photo of section.photos) {
+          for (const photo of allPhotos) {
             if (yPosition > 205) {
               doc.addPage()
               yPosition = 20
@@ -337,9 +505,84 @@ export default function ClientPortal() {
               yPosition += 8
             }
           }
-        }
 
-        yPosition += 6
+          yPosition += 6
+        }
+      } else {
+        for (const section of sections) {
+          if (!section.notes && (!section.photos || section.photos.length === 0)) {
+            continue
+          }
+
+          if (yPosition > 230) {
+            doc.addPage()
+            yPosition = 20
+            pageNumber++
+          }
+
+          doc.setFillColor(34, 177, 76)
+          doc.rect(20, yPosition - 2, 170, 8, 'F')
+
+          doc.setTextColor(255, 255, 255)
+          doc.setFontSize(11)
+          doc.setFont(undefined, 'bold')
+          doc.text(SECTION_LABELS[section.section_type], 25, yPosition + 3)
+
+          yPosition += 10
+
+          doc.setTextColor(0, 0, 0)
+          doc.setFont(undefined, 'normal')
+
+          if (section.notes) {
+            doc.setFontSize(9)
+            doc.setTextColor(29, 53, 87)
+            doc.setFont(undefined, 'bold')
+            doc.text('Notes:', 25, yPosition)
+            yPosition += 5
+
+            doc.setFont(undefined, 'normal')
+            doc.setTextColor(60, 60, 60)
+            const lines = doc.splitTextToSize(section.notes, 160)
+            doc.text(lines, 25, yPosition)
+            yPosition += lines.length * 4 + 6
+          }
+
+          if (section.photos && section.photos.length > 0) {
+            doc.setTextColor(29, 53, 87)
+            doc.setFont(undefined, 'bold')
+            doc.setFontSize(9)
+            doc.text(`Photos (${section.photos.length}):`, 25, yPosition)
+            yPosition += 6
+
+            for (const photo of section.photos) {
+              if (yPosition > 205) {
+                doc.addPage()
+                yPosition = 20
+                pageNumber++
+              }
+
+              try {
+                const imgData = await loadImageAsBase64(photo.photo_url)
+                const imgWidth = 75
+                const imgHeight = 56
+
+                doc.setDrawColor(34, 177, 76)
+                doc.setLineWidth(0.5)
+                doc.rect(24, yPosition - 1, imgWidth + 2, imgHeight + 2)
+
+                doc.addImage(imgData, 'JPEG', 25, yPosition, imgWidth, imgHeight)
+                yPosition += imgHeight + 7
+              } catch (error) {
+                console.error('Erreur chargement image:', error)
+                doc.setTextColor(180, 180, 180)
+                doc.text('Image non disponible', 25, yPosition)
+                yPosition += 8
+              }
+            }
+          }
+
+          yPosition += 6
+        }
       }
 
       if (client.signature_data || client.client_comment) {
@@ -751,6 +994,7 @@ export default function ClientPortal() {
               onClick={() => {
                 setSelectedChantier(null)
                 setInterventions([])
+                setAllChantierPhotos([])
               }}
               style={{
                 background: 'white',
@@ -809,6 +1053,154 @@ export default function ClientPortal() {
                 </div>
               </div>
             </div>
+
+            {selectedChantier?.name?.toUpperCase().includes('HELFER') && (
+              <div style={{
+                background: 'white',
+                padding: '32px',
+                borderRadius: '16px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                marginBottom: '40px',
+                border: '1px solid rgba(34, 177, 76, 0.1)',
+                borderTop: '4px solid #22b14c'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '24px',
+                  paddingBottom: '20px',
+                  borderBottom: '2px solid #f0faf7'
+                }}>
+                  <span style={{ fontSize: '32px' }}>📸</span>
+                  <h3 style={{
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: '#1a202c',
+                    margin: 0
+                  }}>
+                    HELFER COK
+                  </h3>
+                  <button
+                    onClick={generatePhotosPDF}
+                    disabled={generatingPhotoPDF || loadingPhotos || allChantierPhotos.length === 0}
+                    style={{
+                      marginLeft: 'auto',
+                      padding: '12px 20px',
+                      background: (generatingPhotoPDF || allChantierPhotos.length === 0) ? '#a0aec0' : 'linear-gradient(135deg, #22b14c 0%, #1d9e3e 100%)',
+                      color: 'white',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      border: 'none',
+                      cursor: (generatingPhotoPDF || allChantierPhotos.length === 0) ? 'not-allowed' : 'pointer',
+                      boxShadow: allChantierPhotos.length === 0 ? 'none' : '0 4px 12px rgba(34, 177, 76, 0.3)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {generatingPhotoPDF ? 'Génération...' : '📄 Générer PDF photos'}
+                  </button>
+                </div>
+                {loadingPhotos ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#718096',
+                    fontSize: '16px'
+                  }}>
+                    Chargement des photos...
+                  </div>
+                ) : allChantierPhotos.length > 0 ? (
+                  <>
+                    <div style={{
+                      color: '#22b14c',
+                      fontWeight: '700',
+                      marginBottom: '16px',
+                      fontSize: '15px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span style={{ fontSize: '20px' }}>📸</span>
+                      Documentation photographique ({allChantierPhotos.length})
+                    </div>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                      gap: '16px'
+                    }}>
+                      {allChantierPhotos.map((photo) => (
+                        <div
+                          key={photo.id}
+                          style={{
+                            position: 'relative',
+                            paddingTop: '75%',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                            transition: 'all 0.3s',
+                            border: '2px solid transparent'
+                          }}
+                          onClick={() => window.open(photo.photo_url, '_blank')}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.03)'
+                            e.currentTarget.style.boxShadow = '0 12px 32px rgba(34, 177, 76, 0.2)'
+                            e.currentTarget.style.borderColor = '#22b14c'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)'
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'
+                            e.currentTarget.style.borderColor = 'transparent'
+                          }}
+                        >
+                          <img
+                            src={photo.photo_url}
+                            alt="Photo intervention"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '8px',
+                            right: '8px',
+                            background: 'rgba(34, 177, 76, 0.9)',
+                            color: 'white',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            Agrandir 🔍
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{
+                    color: '#a0aec0',
+                    fontStyle: 'italic',
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    background: '#f7fafc',
+                    borderRadius: '10px'
+                  }}>
+                    Aucune photo disponible
+                  </div>
+                )}
+              </div>
+            )}
 
             {interventions.length === 0 ? (
               <div style={{
@@ -1062,7 +1454,175 @@ export default function ClientPortal() {
               </div>
             </div>
 
-            {sections.map((section) => (
+            {selectedChantier?.name?.toUpperCase().includes('HELFER') ? (
+              (() => {
+                const allPhotos = sections.flatMap(s => s.photos || [])
+                const sectionsWithNotes = sections.filter(s => s.notes)
+                return (
+                  <>
+                    {sectionsWithNotes.map((section) => (
+                      <div
+                        key={section.id}
+                        style={{
+                          background: 'white',
+                          padding: '32px',
+                          borderRadius: '16px',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                          marginBottom: '24px',
+                          border: '1px solid rgba(34, 177, 76, 0.1)'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          marginBottom: '24px',
+                          paddingBottom: '20px',
+                          borderBottom: '2px solid #f0faf7'
+                        }}>
+                          <span style={{ fontSize: '32px' }}>📋</span>
+                          <h4 style={{
+                            fontSize: '24px',
+                            fontWeight: '700',
+                            color: '#1a202c',
+                            margin: 0
+                          }}>
+                            {SECTION_LABELS[section.section_type]}
+                          </h4>
+                        </div>
+                        <div style={{
+                          color: '#4a5568',
+                          padding: '20px',
+                          background: 'linear-gradient(135deg, #f8fffe 0%, #f0faf7 100%)',
+                          borderRadius: '12px',
+                          whiteSpace: 'pre-wrap',
+                          lineHeight: '1.7',
+                          fontSize: '15px',
+                          borderLeft: '4px solid #22b14c'
+                        }}>
+                          {section.notes}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div style={{
+                      background: 'white',
+                      padding: '32px',
+                      borderRadius: '16px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                      marginBottom: '24px',
+                      border: '1px solid rgba(34, 177, 76, 0.1)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginBottom: '24px',
+                        paddingBottom: '20px',
+                        borderBottom: '2px solid #f0faf7'
+                      }}>
+                        <span style={{ fontSize: '32px' }}>📸</span>
+                        <h4 style={{
+                          fontSize: '24px',
+                          fontWeight: '700',
+                          color: '#1a202c',
+                          margin: 0
+                        }}>
+                          HELFER COK
+                        </h4>
+                      </div>
+                      {allPhotos.length > 0 ? (
+                        <>
+                          <div style={{
+                            color: '#22b14c',
+                            fontWeight: '700',
+                            marginBottom: '16px',
+                            fontSize: '15px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span style={{ fontSize: '20px' }}>📸</span>
+                            Documentation photographique ({allPhotos.length})
+                          </div>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                            gap: '16px'
+                          }}>
+                            {allPhotos.map((photo) => (
+                              <div
+                                key={photo.id}
+                                style={{
+                                  position: 'relative',
+                                  paddingTop: '75%',
+                                  borderRadius: '12px',
+                                  overflow: 'hidden',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                                  transition: 'all 0.3s',
+                                  border: '2px solid transparent'
+                                }}
+                                onClick={() => window.open(photo.photo_url, '_blank')}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'scale(1.03)'
+                                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(34, 177, 76, 0.2)'
+                                  e.currentTarget.style.borderColor = '#22b14c'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'scale(1)'
+                                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'
+                                  e.currentTarget.style.borderColor = 'transparent'
+                                }}
+                              >
+                                <img
+                                  src={photo.photo_url}
+                                  alt="Photo intervention"
+                                  style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                  }}
+                                />
+                                <div style={{
+                                  position: 'absolute',
+                                  bottom: '8px',
+                                  right: '8px',
+                                  background: 'rgba(34, 177, 76, 0.9)',
+                                  color: 'white',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: '600'
+                                }}>
+                                  Agrandir 🔍
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{
+                          color: '#a0aec0',
+                          fontStyle: 'italic',
+                          textAlign: 'center',
+                          padding: '40px 20px',
+                          background: '#f7fafc',
+                          borderRadius: '10px'
+                        }}>
+                          Aucune photo
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )
+              })()
+            ) : sections.map((section) => (
               <div
                 key={section.id}
                 style={{
